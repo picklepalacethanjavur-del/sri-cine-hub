@@ -1,0 +1,2 @@
+import Link from "next/link";
+export function SiteHeader(){return <header className="siteHeader"><div className="headerInner"><Link className="brand" href="/"><img src="/sri-cine-hub-logo.jpg" alt="Sri Cine Hub logo"/><span>SRI CINE HUB</span></Link><nav className="siteNav"><Link href="/equipment">Equipment</Link><Link href="/request-quote">Availability</Link><Link href="/#contact">Contact</Link><Link className="adminLink" href="/admin">Staff portal</Link></nav></div></header>}
