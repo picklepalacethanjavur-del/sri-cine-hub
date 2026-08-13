@@ -5,3 +5,15 @@
 /* P1 V4 */
 .dateTimeLabel{display:grid;gap:7px}.dateTimePicker{display:grid;grid-template-columns:1.35fr .8fr;gap:8px}.pickerPart{position:relative;display:flex;align-items:center;background:#0c0c0c;border:1px solid #34322e;border-radius:9px;cursor:pointer}.pickerPart input{border:0!important;background:transparent!important;padding-left:38px!important;cursor:pointer}.pickerIcon{position:absolute;left:12px;color:var(--gold);pointer-events:none}.formPanel{display:grid;gap:12px;margin-bottom:14px}.formPanel input,.formPanel select,.formPanel textarea{width:100%;background:#0c0c0c;color:#fff;border:1px solid #34322e;border-radius:9px;padding:12px;font-size:15px}.assetChecklist{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px}.assetChecklist label{display:flex;align-items:center;gap:8px;background:#151515;padding:9px;border-radius:7px}.assetChecklist input{width:auto}.scannerBox{border:1px solid #3b3527;border-radius:14px;padding:14px;background:#10100e}.scannerHead{display:flex;justify-content:space-between;align-items:center}.scannerVideo{width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin-top:12px;background:#000}.scannerManual{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.scanSummary{display:flex;justify-content:space-between;background:#161616;border-radius:10px;padding:12px;margin:12px 0}.assetOperation{border-top:1px solid var(--line);padding:16px 0}.assetOperation h3{margin:0 0 6px}.assetOperation>span{color:var(--muted);font-size:12px}.assetOperation label{display:grid;gap:7px;margin-top:10px}.quoteTotal{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:14px;font-size:20px}.receiptGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.receiptCard{background:white;color:#151515;border-radius:14px;padding:24px}.receiptHead{display:flex;justify-content:space-between}.receiptHead div{display:grid}.receiptHead span,.receiptCard p{color:#555}.receiptCard dl{display:grid;gap:7px}.receiptCard dl div{display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:7px}.receiptCard dd{font-weight:700}@media(max-width:700px){.dateTimePicker,.assetChecklist,.receiptGrid{grid-template-columns:1fr}.scannerManual{grid-template-columns:1fr}}
 @media print{header.siteHeader,.siteFooter,.adminNav,.adminShell>.eyebrow,.adminShell>h1{display:none!important}.receiptGrid{display:block}.receiptCard{page-break-after:always;border:1px solid #aaa}}
+
+/* V4.2 quote QA fixes */
+.quoteForm button[disabled]{opacity:.72;cursor:not-allowed}
+.availabilityBox .formNote{margin-bottom:0}
+@media(max-width:700px){
+  .dateGrid{grid-template-columns:1fr}
+  .dateTimePicker{grid-template-columns:minmax(0,1.25fr) minmax(110px,.75fr)}
+  .pickerPart input{min-width:0;width:100%}
+}
+@media(max-width:430px){
+  .dateTimePicker{grid-template-columns:1fr}
+}
