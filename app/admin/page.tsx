@@ -1,20 +1,25 @@
-import { redirect } from 'next/navigation'
-import { AdminNav } from '@/components/AdminNav'
-import { SignOutButton } from '@/components/SignOutButton'
-import { createClient } from '@/lib/supabase/server'
-
+import { AdminNav } from "@/components/AdminNav";
+import { SignOutButton } from "@/components/SignOutButton";
+import { requireStaff } from "@/lib/auth";
 export default async function Admin(){
- const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user) redirect('/login')
- const [{data:cameras},{data:bookings},{data:profile},{data:quotes}] = await Promise.all([
-   supabase.from('cameras').select('id,camera_code,name,status,current_hours').order('camera_code'),
-   supabase.from('bookings').select('id,booking_code,status,production_name,project_name,start_at,end_at,quoted_total_inr,amount_received_inr').order('start_at',{ascending:false}).limit(10),
-   supabase.from('profiles').select('full_name,role').eq('id',user.id).single(),
-   supabase.from('quote_requests').select('id,status').eq('status','new')
- ])
- const cams=cameras||[], books=bookings||[]; const out=cams.filter(c=>c.status==='out').length, available=cams.filter(c=>c.status==='available').length
- const balance=books.reduce((n,b)=>n+Number(b.quoted_total_inr||0)-Number(b.amount_received_inr||0),0)
- return <section className="adminShell"><div className="adminTitle"><div><div className="eyebrow">LIVE SUPABASE OPERATIONS</div><h1>Rental Dashboard</h1><p>{profile?.full_name||user.email}</p></div><div><span className="roleBadge">{profile?.role||'staff'}</span><SignOutButton/></div></div><AdminNav/>
- <div className="metricGrid"><div className="metric"><span>Available</span><b>{available}</b></div><div className="metric"><span>Out</span><b>{out}</b></div><div className="metric"><span>New quote requests</span><b>{quotes?.length||0}</b></div><div className="metric"><span>Balance due</span><b>₹{balance.toLocaleString('en-IN')}</b></div></div>
- <div className="adminGrid"><div className="adminPanel"><h2>Recent bookings</h2>{books.length?books.map(b=><div className="bookingRow" key={b.id}><div><b>{b.booking_code}</b><span>{b.production_name||'Client'} · {b.project_name||'Project'}</span></div><em className={`status ${b.status}`}>{b.status.replaceAll('_',' ')}</em></div>):<p>No bookings yet.</p>}</div><div className="adminPanel"><h2>Fleet now</h2>{cams.map(c=><div className="bookingRow" key={c.id}><div><b>{c.camera_code} · {c.name}</b><span>{c.current_hours||0} verified hours</span></div><em className={`status ${c.status}`}>{c.status}</em></div>)}</div></div>
+ const {supabase,user,profile}=await requireStaff();
+ await supabase.rpc("sync_overdue_bookings");
+ const [{data:cameras},{data:bookings},{data:quotes},{data:receipts}]=await Promise.all([
+  supabase.from("cameras").select("id,status"),supabase.from("bookings").select("id,status,quoted_total_inr,amount_received_inr"),
+  supabase.from("quote_requests").select("id,status").eq("status","new"),supabase.from("receipts").select("id")
+ ]);
+ const cams=cameras||[], books=bookings||[];
+ return <section className="adminShell">
+  <div className="adminTitle"><div><div className="eyebrow">SRI CINE HUB OPERATIONS</div><h1>Rental Dashboard</h1><p>{profile.full_name||user.email}</p></div><div><span className="roleBadge">{profile.role}</span><SignOutButton/></div></div>
+  <AdminNav/>
+  <div className="metricGrid">
+   <div className="metric"><span>Available</span><b>{cams.filter(c=>c.status==="available").length}</b></div>
+   <div className="metric"><span>Out</span><b>{cams.filter(c=>c.status==="out").length}</b></div>
+   <div className="metric"><span>Overdue</span><b>{books.filter(b=>b.status==="overdue").length}</b></div>
+   <div className="metric"><span>Quote requests</span><b>{quotes?.length||0}</b></div>
+   <div className="metric"><span>Receipts</span><b>{receipts?.length||0}</b></div>
+  </div>
+  <div className="adminGrid"><div className="adminPanel"><h2>P1 workflow</h2><p>Quote → Reservation → QR checkout → condition/photo proof → return → receipt.</p></div>
+  <div className="adminPanel"><h2>RFID ready</h2><p>Every camera/accessory has a QR code and RFID tag field. RFID bulk scanning will be added in P2 without changing the asset model.</p></div></div>
  </section>
 }
