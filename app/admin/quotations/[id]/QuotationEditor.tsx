@@ -13,8 +13,8 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
   const [otherCharges,setOtherCharges]=useState(Number(quotation.other_charges_inr||0));
   const [customerNotes,setCustomerNotes]=useState(quotation.customer_notes||"");
   const [internalNotes,setInternalNotes]=useState(quotation.internal_notes||"");
-  const [status,setStatus]=useState(quotation.status);
-  const [saving,setSaving]=useState(false);
+  const [savingAction,setSavingAction]=useState<"draft"|"generate"|null>(null);
+  const saving=!!savingAction;
   const [message,setMessage]=useState("");
   const defaultRentalDays=request ? Math.max(1,Math.ceil((new Date(request.end_at).getTime()-new Date(request.start_at).getTime())/86400000)) : 1;
 
@@ -45,13 +45,15 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
     }));
   }
 
-  async function save(){
+  async function saveWithStatus(targetStatus:"draft"|"generated"){
     if(!rows.length){setMessage("Add at least one quotation item.");return;}
-    setSaving(true);setMessage("");
+    if(quotation.status==="converted"){setMessage("Converted quotations are locked.");return;}
+    setSavingAction(targetStatus==="generated"?"generate":"draft");
+    setMessage("");
     try{
       const {error}=await supabase.rpc("save_quotation_atomic",{
         p_quotation_id:quotation.id,
-        p_status:status,
+        p_status:targetStatus,
         p_discount_inr:discount,
         p_tax_inr:tax,
         p_other_charges_inr:otherCharges,
@@ -60,50 +62,22 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
         p_items:rpcItems()
       });
       if(error) throw error;
-      setMessage("Quotation saved.");
-      setTimeout(()=>location.reload(),500);
+      if(targetStatus==="generated"){
+        location.href=`/admin/quotations/${quotation.id}/print?generated=1`;
+      }else{
+        setMessage("Draft saved.");
+        setTimeout(()=>location.reload(),450);
+      }
     }catch(e){
-      setMessage(e instanceof Error?e.message:"Unable to save.");
-      setSaving(false);
-    }
-  }
-
-  async function convertToBooking(){
-    if(status!=="accepted"){
-      setMessage("Mark the quotation Accepted and save it before converting to a booking.");
-      return;
-    }
-    setSaving(true);setMessage("");
-    try{
-      // Persist the latest editor values atomically before conversion.
-      const saved=await supabase.rpc("save_quotation_atomic",{
-        p_quotation_id:quotation.id,
-        p_status:"accepted",
-        p_discount_inr:discount,
-        p_tax_inr:tax,
-        p_other_charges_inr:otherCharges,
-        p_customer_notes:customerNotes,
-        p_internal_notes:internalNotes,
-        p_items:rpcItems()
-      });
-      if(saved.error) throw saved.error;
-
-      const {data,error}=await supabase.rpc("convert_quotation_to_booking_atomic",{
-        p_quotation_id:quotation.id
-      });
-      if(error) throw error;
-      const result=data as {booking_id:string;booking_code:string};
-      location.href=`/admin/bookings?created=${encodeURIComponent(result.booking_code)}`;
-    }catch(e){
-      setMessage(e instanceof Error?e.message:"Unable to convert.");
-      setSaving(false);
+      setMessage(e instanceof Error?e.message:"Unable to save quotation.");
+      setSavingAction(null);
     }
   }
 
   return <>
     <div className="adminPanel">
       <div className="quotationStatusBar">
-        <label>Status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="draft">Draft</option><option value="sent">Sent</option><option value="accepted">Accepted</option><option value="declined">Declined</option><option value="expired">Expired</option><option value="converted">Converted</option></select></label>
+        <div><span className={`workflowBadge ${quotation.status}`}>{String(quotation.status).replace("_"," ").toUpperCase()}</span><p className="formNote">Edit pricing here. Workflow actions such as Sent, Accepted and Convert to Booking are handled from the quotation document.</p></div>
         <span>Valid to {quotation.valid_until||"—"}</span>
       </div>
     </div>
@@ -147,11 +121,15 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
         <label><span>Other charges</span><input type="number" value={otherCharges} onChange={e=>setOtherCharges(Number(e.target.value))}/></label>
         <div className="grandTotal"><span>Grand Total</span><b>{money(total)}</b></div>
         <div className="quoteActions">
-          <button className="button ghost" type="button" disabled={saving} onClick={save}>Save Changes</button>
-          <button className="button gold" type="button" disabled={saving||status==="converted"} onClick={convertToBooking}>Convert to Booking</button>
+          <button className="button ghost" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>saveWithStatus("draft")}>{savingAction==="draft"?"Saving Draft…":"Save Draft"}</button>
+          <button className="button gold" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>saveWithStatus("generated")}>{savingAction==="generate"?"Generating…":quotation.status==="draft"?"Generate Quotation":"Generate Updated Quotation"}</button>
         </div>
+        <a className="button ghost fullWidthButton" href={`/admin/quotations/${quotation.id}/print`}>View Quotation Document</a>
         {message&&<div className={message.includes("saved")?"successBox":"errorBox"}>{message}</div>}
       </div>
     </div>
+    {saving&&<div className="actionOverlay" role="status" aria-live="polite">
+      <div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating updated quotation…":"Saving quotation draft…"}</b><small>Please wait while the pricing is saved.</small></div>
+    </div>}
   </>;
 }

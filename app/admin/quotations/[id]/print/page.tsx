@@ -1,11 +1,18 @@
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
-import { PrintButton } from "./PrintButton";
+import { QuotationDocumentActions } from "./QuotationDocumentActions";
 
 const money=(n:any)=>`₹${Number(n||0).toLocaleString("en-IN")}`;
 
-export default async function PrintableQuotation({params}:{params:Promise<{id:string}>}){
+export default async function PrintableQuotation({
+  params,
+  searchParams
+}:{
+  params:Promise<{id:string}>,
+  searchParams:Promise<{generated?:string}>
+}){
   const {id}=await params;
+  const query=await searchParams;
   const {supabase}=await requireStaff();
   const [{data:q},{data:items},{data:req}] = await Promise.all([
     supabase.from("quotations").select("*,customers(*)").eq("id",id).single(),
@@ -16,10 +23,11 @@ export default async function PrintableQuotation({params}:{params:Promise<{id:st
   const request=(req as any)?.quote_requests;
 
   return <main className="printDocument">
-    <div className="printToolbar printHide"><a href={`/admin/quotations/${id}`}>← Back to quotation</a><PrintButton/></div>
+    {query.generated==="1"&&<div className="documentSuccessBanner printHide">✓ Quotation {q.quotation_code} generated successfully. Review the document, then mark it as sent when you share it with the customer.</div>}
+    <QuotationDocumentActions quotationId={id} status={q.status}/>
     <section className="quotationPaper">
       <header className="quotationHeader">
-        <div><h1>SRI CINE HUB PVT. LTD.</h1><p>Camera Rental · Lenses · Lights · Grip · Post Production</p></div>
+        <div><h1>SRI CINE HUB PVT. LTD.</h1><p>Camera Rental · Lenses · Lights · Grip · Transport · Production Services</p></div>
         <div className="quoteNumber"><span>QUOTATION</span><b>{q.quotation_code}</b><small>Date: {new Date(q.created_at).toLocaleDateString("en-IN")}</small><small>Valid until: {q.valid_until||"—"}</small></div>
       </header>
 

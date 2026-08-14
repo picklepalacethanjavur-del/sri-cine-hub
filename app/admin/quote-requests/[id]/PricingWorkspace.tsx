@@ -56,7 +56,8 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,existin
   const [customerNotes,setCustomerNotes]=useState("");
   const [internalNotes,setInternalNotes]=useState("");
   const [validDays,setValidDays]=useState(7);
-  const [saving,setSaving]=useState(false);
+  const [savingAction,setSavingAction]=useState<"draft"|"generate"|null>(null);
+  const saving=!!savingAction;
   const [message,setMessage]=useState("");
 
   const subtotal=rows.reduce((n:number,r:Row)=>n+(r.quantity*r.rental_days*r.quoted_rate_inr),0);
@@ -98,9 +99,9 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,existin
     }));
   }
 
-  async function saveQuotation(status:"draft"|"sent"){
+  async function saveQuotation(status:"draft"|"generated"){
     if(!rows.length){setMessage("Add at least one quotation item.");return;}
-    setSaving(true);setMessage("");
+    setSavingAction(status==="generated"?"generate":"draft");setMessage("");
     try{
       const validUntil=new Date(Date.now()+validDays*86400000).toISOString().slice(0,10);
       const {data,error}=await supabase.rpc("create_quotation_atomic",{
@@ -116,10 +117,10 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,existin
       });
       if(error) throw error;
       const result=data as {quotation_id:string};
-      location.href=`/admin/quotations/${result.quotation_id}`;
+      location.href=status==="generated"?`/admin/quotations/${result.quotation_id}/print?generated=1`:`/admin/quotations/${result.quotation_id}`;
     }catch(e){
       setMessage(e instanceof Error?e.message:"Unable to save quotation.");
-      setSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -182,11 +183,14 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,existin
         <label><span>Other charges</span><input type="number" value={otherCharges} onChange={e=>setOtherCharges(Number(e.target.value))}/></label>
         <div className="grandTotal"><span>Grand Total</span><b>{money(total)}</b></div>
         <div className="quoteActions">
-          <button type="button" className="button ghost" disabled={saving} onClick={()=>saveQuotation("draft")}>Save Draft</button>
-          <button type="button" className="button gold" disabled={saving} onClick={()=>saveQuotation("sent")}>{saving?"Saving…":"Generate Quotation"}</button>
+          <button type="button" className="button ghost" disabled={saving} onClick={()=>saveQuotation("draft")}>{savingAction==="draft"?"Saving Draft…":"Save Draft"}</button>
+          <button type="button" className="button gold" disabled={saving} onClick={()=>saveQuotation("generated")}>{savingAction==="generate"?"Generating…":"Generate Quotation"}</button>
         </div>
         {message&&<div className="errorBox">{message}</div>}
       </div>
     </div>
+    {saving&&<div className="actionOverlay" role="status" aria-live="polite">
+      <div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating quotation…":"Saving draft…"}</b><small>Please wait while Sri Cine Hub updates the quotation.</small></div>
+    </div>}
   </>;
 }

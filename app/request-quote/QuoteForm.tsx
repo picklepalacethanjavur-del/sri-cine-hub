@@ -559,6 +559,9 @@ export default function QuoteForm() {
       )}
 
       <p className="formNote">Rates are internal. No payment is collected here.</p>
+      {loading&&<div className="actionOverlay" role="status" aria-live="polite">
+        <div className="actionOverlayCard"><span className="loadingSpinner"/><b>Submitting quote request…</b><small>We’re saving your equipment selection and rental dates.</small></div>
+      </div>}
     </form>
   );
 }

@@ -7,6 +7,7 @@ function label(status:string){
   if(status==="reviewing") return "Pricing";
   if(status==="quoted") return "Quotation Generated";
   if(status==="converted") return "Converted";
+  if(status==="closed") return "Closed";
   return status;
 }
 
