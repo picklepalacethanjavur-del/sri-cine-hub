@@ -84,48 +84,39 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,existin
     setRows(old=>[...old,{key:`other:${Date.now()}`,item_type:"other",item_id:null,description:"Custom charge",quantity:1,rental_days:1,internal_rate_inr:0,quoted_rate_inr:0,notes:""}]);
   }
 
-  async function findOrCreateCustomer(){
-    let customerId:null|string=null;
-    if(request.phone){
-      const {data}=await supabase.from("customers").select("id").eq("phone",request.phone).limit(1).maybeSingle();
-      customerId=data?.id||null;
-    }
-    if(!customerId){
-      const {data,error}=await supabase.from("customers").insert({
-        name:request.name,company_name:request.company_name,phone:request.phone,
-        whatsapp:request.whatsapp,email:request.email
-      }).select("id").single();
-      if(error) throw error;
-      customerId=data.id;
-    }
-    return customerId;
+  function rpcItems(){
+    return rows.map((r,i)=>({
+      item_type:r.item_type,
+      item_id:r.item_id,
+      description:r.description,
+      quantity:r.quantity,
+      rental_days:r.rental_days,
+      quoted_rate_inr:r.quoted_rate_inr,
+      internal_rate_inr:r.internal_rate_inr,
+      notes:r.notes,
+      sort_order:i
+    }));
   }
 
   async function saveQuotation(status:"draft"|"sent"){
     if(!rows.length){setMessage("Add at least one quotation item.");return;}
     setSaving(true);setMessage("");
     try{
-      const customerId=await findOrCreateCustomer();
       const validUntil=new Date(Date.now()+validDays*86400000).toISOString().slice(0,10);
-
-      const {data:q,error}=await supabase.from("quotations").insert({
-        quote_request_id:request.id,customer_id:customerId,status,
-        valid_until:validUntil,subtotal_inr:subtotal,discount_inr:discount,tax_inr:tax,
-        other_charges_inr:otherCharges,customer_notes:customerNotes,internal_notes:internalNotes,
-        created_by:userId
-      }).select("id,quotation_code").single();
+      const {data,error}=await supabase.rpc("create_quotation_atomic",{
+        p_quote_request_id:request.id,
+        p_status:status,
+        p_valid_until:validUntil,
+        p_discount_inr:discount,
+        p_tax_inr:tax,
+        p_other_charges_inr:otherCharges,
+        p_customer_notes:customerNotes,
+        p_internal_notes:internalNotes,
+        p_items:rpcItems()
+      });
       if(error) throw error;
-
-      const itemRows=rows.map((r,i)=>({
-        quotation_id:q.id,item_type:r.item_type,item_id:r.item_id,description:r.description,
-        quantity:r.quantity,rental_days:r.rental_days,unit_rate_inr:r.quoted_rate_inr,
-        internal_rate_inr:r.internal_rate_inr,notes:r.notes,sort_order:i
-      }));
-      const ins=await supabase.from("quotation_items").insert(itemRows);
-      if(ins.error) throw ins.error;
-
-      await supabase.from("quote_requests").update({status:status==="sent"?"quoted":"reviewing"}).eq("id",request.id);
-      location.href=`/admin/quotations/${q.id}`;
+      const result=data as {quotation_id:string};
+      location.href=`/admin/quotations/${result.quotation_id}`;
     }catch(e){
       setMessage(e instanceof Error?e.message:"Unable to save quotation.");
       setSaving(false);
