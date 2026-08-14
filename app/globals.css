@@ -17,3 +17,11 @@
 @media(max-width:430px){
   .dateTimePicker{grid-template-columns:1fr}
 }
+
+/* V4.3 UI polish */
+button, .button, .smallButton, .signOutButton {
+  cursor: pointer;
+}
+button:disabled, .button:disabled, .smallButton:disabled {
+  cursor: not-allowed;
+}
