@@ -1,2 +1,2 @@
-import {AdminNav} from "@/components/AdminNav";import {requireStaff} from "@/lib/auth";import {QuoteManager} from "./QuoteManager";
-export default async function Quotes(){const {supabase,user}=await requireStaff();const [{data:req},{data:rates},{data:cams},{data:qs}]=await Promise.all([supabase.from("quote_requests").select("*").order("created_at",{ascending:false}),supabase.from("internal_rates").select("*"),supabase.from("cameras").select("id,camera_code,name"),supabase.from("quotations").select("*,customers(name,company_name)").order("created_at",{ascending:false})]);return <section className="adminShell"><div className="eyebrow">QUOTE REQUESTS → PRICE</div><h1>Quotations</h1><AdminNav/><QuoteManager requests={req||[]} rates={rates||[]} cameras={cams||[]} quotations={qs||[]} userId={user.id}/></section>}
+import { redirect } from "next/navigation";
+export default function LegacyQuotes(){ redirect("/admin/quote-requests"); }
