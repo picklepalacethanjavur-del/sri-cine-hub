@@ -1,74 +1,7 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-
-type ActionName="sent"|"accepted"|"declined"|"convert"|null;
-
-function pretty(status:string){
-  return status.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
-}
-
-export function QuotationDocumentActions({quotationId,status}:{quotationId:string;status:string}){
-  const supabase=createClient();
-  const router=useRouter();
-  const [busy,setBusy]=useState<ActionName>(null);
-  const [message,setMessage]=useState("");
-
-  async function setStatus(next:"sent"|"accepted"|"declined"){
-    setBusy(next); setMessage("");
-    try{
-      const {error}=await supabase.rpc("set_quotation_status",{p_quotation_id:quotationId,p_status:next});
-      if(error) throw error;
-      setMessage(next==="sent"?"Quotation marked as sent.":next==="accepted"?"Quotation accepted.":"Quotation declined.");
-      router.refresh();
-    }catch(e){
-      setMessage(e instanceof Error?e.message:"Unable to update quotation.");
-    }finally{
-      setBusy(null);
-    }
-  }
-
-  async function convert(){
-    if(status!=="accepted") return;
-    setBusy("convert"); setMessage("");
-    try{
-      const {data,error}=await supabase.rpc("convert_quotation_to_booking_atomic",{p_quotation_id:quotationId});
-      if(error) throw error;
-      const result=data as {booking_code:string};
-      location.href=`/admin/bookings?created=${encodeURIComponent(result.booking_code)}`;
-    }catch(e){
-      setMessage(e instanceof Error?e.message:"Unable to convert quotation.");
-      setBusy(null);
-    }
-  }
-
-  return <>
-    <div className="documentWorkflowBar printHide">
-      <div className="documentWorkflowStatus">
-        <span>STATUS</span>
-        <b className={`workflowBadge ${status}`}>{pretty(status)}</b>
-      </div>
-      <div className="documentWorkflowActions">
-        <Link className="button ghost" href={`/admin/quotations/${quotationId}`}>← Edit Quotation</Link>
-        <button className="button ghost" type="button" disabled={!!busy} onClick={()=>window.print()}>Print / Save PDF</button>
-        {(status==="draft"||status==="generated")&&<button className="button gold" type="button" disabled={!!busy} onClick={()=>setStatus("sent")}>{busy==="sent"?"Marking Sent…":"Mark as Sent"}</button>}
-        {status==="sent"&&<>
-          <button className="button ghost dangerButton" type="button" disabled={!!busy} onClick={()=>setStatus("declined")}>{busy==="declined"?"Updating…":"Mark Declined"}</button>
-          <button className="button gold" type="button" disabled={!!busy} onClick={()=>setStatus("accepted")}>{busy==="accepted"?"Updating…":"Mark Accepted"}</button>
-        </>}
-        {status==="accepted"&&<>
-          <button className="button ghost dangerButton" type="button" disabled={!!busy} onClick={()=>setStatus("declined")}>{busy==="declined"?"Updating…":"Mark Declined"}</button>
-          <button className="button gold" type="button" disabled={!!busy} onClick={convert}>{busy==="convert"?"Creating Booking…":"Convert to Booking →"}</button>
-        </>}
-        {(status==="declined"||status==="expired")&&<button className="button ghost" type="button" disabled={!!busy} onClick={()=>setStatus("sent")}>{busy==="sent"?"Reopening…":"Reopen / Mark Sent"}</button>}
-        {status==="converted"&&<Link className="button gold" href="/admin/bookings">View Bookings →</Link>}
-      </div>
-    </div>
-    {message&&<div className={message.toLowerCase().includes("unable")||message.toLowerCase().includes("error")?"errorBox printHide":"successBox printHide"}>{message}</div>}
-    {busy&&<div className="actionOverlay printHide" role="status" aria-live="polite">
-      <div className="actionOverlayCard"><span className="loadingSpinner"/><b>{busy==="convert"?"Creating booking…":"Updating quotation status…"}</b><small>Please wait. Do not click the action again.</small></div>
-    </div>}
-  </>;
+import {useState} from "react";import Link from "next/link";import {useRouter} from "next/navigation";import {createClient} from "@/lib/supabase/client";import {DocumentActions} from "@/components/DocumentActions";
+type ActionName="sent"|"accepted"|"declined"|"convert"|null;const pretty=(s:string)=>s.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
+export function QuotationDocumentActions({quotationId,quotationCode,status,customerName}:{quotationId:string;quotationCode:string;status:string;customerName:string}){const supabase=createClient();const router=useRouter();const [busy,setBusy]=useState<ActionName>(null);const [message,setMessage]=useState("");async function setStatus(next:"sent"|"accepted"|"declined"){setBusy(next);setMessage("");try{const {error}=await supabase.rpc("set_quotation_status",{p_quotation_id:quotationId,p_status:next});if(error)throw error;setMessage(next==="sent"?"Quotation marked as sent.":next==="accepted"?"Quotation accepted.":"Quotation declined.");router.refresh();}catch(e){setMessage(e instanceof Error?e.message:"Unable to update quotation.");}finally{setBusy(null);}}async function convert(){if(status!=="accepted")return;setBusy("convert");setMessage("");try{const {data,error}=await supabase.rpc("convert_quotation_to_booking_atomic",{p_quotation_id:quotationId});if(error)throw error;const result=data as {booking_code:string};location.href=`/admin/bookings?created=${encodeURIComponent(result.booking_code)}`;}catch(e){setMessage(e instanceof Error?e.message:"Unable to convert quotation.");setBusy(null);}}
+ const workflow=<>{(status==="draft"||status==="generated")&&<button className="button gold" type="button" disabled={!!busy} onClick={()=>setStatus("sent")}>{busy==="sent"?"Marking Sent…":"Mark as Sent"}</button>}{status==="sent"&&<><button className="button ghost dangerButton" type="button" disabled={!!busy} onClick={()=>setStatus("declined")}>Mark Declined</button><button className="button gold" type="button" disabled={!!busy} onClick={()=>setStatus("accepted")}>Mark Accepted</button></>}{status==="accepted"&&<><button className="button ghost dangerButton" type="button" disabled={!!busy} onClick={()=>setStatus("declined")}>Mark Declined</button><button className="button gold" type="button" disabled={!!busy} onClick={convert}>{busy==="convert"?"Creating Booking…":"Convert to Booking →"}</button></>}{(status==="declined"||status==="expired")&&<button className="button ghost" type="button" onClick={()=>setStatus("sent")}>Reopen / Mark Sent</button>}{status==="converted"&&<Link className="button gold" href="/admin/bookings">View Bookings →</Link>}</>;
+ return <><div className="documentStatusLine printHide"><span>STATUS</span><b className={`workflowBadge ${status}`}>{pretty(status)}</b></div><DocumentActions editHref={`/admin/quotations/${quotationId}`} downloadHref={`/api/documents/quotation/${quotationId}/pdf`} fileName={`SriCineHub-${quotationCode}.pdf`} whatsappText={`Hi ${customerName||""}, please find Sri Cine Hub quotation ${quotationCode}. Kindly review and let us know if you have any questions.`}>{workflow}</DocumentActions>{message&&<div className={message.toLowerCase().includes("unable")?"errorBox printHide":"successBox printHide"}>{message}</div>}{busy&&<div className="actionOverlay printHide"><div className="actionOverlayCard"><span className="loadingSpinner"/><b>{busy==="convert"?"Creating booking…":"Updating quotation…"}</b></div></div>}</>;
 }

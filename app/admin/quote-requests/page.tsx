@@ -35,7 +35,7 @@ export default async function QuoteRequests(){
     <div className="adminPanel">
       <h2>Received / Pricing</h2>
       {active.length?active.map(r=><Link className="clickableQuoteRow" href={`/admin/quote-requests/${r.id}`} key={r.id}>
-        <div><b>{r.request_code} · {r.company_name||r.name}</b><span>{r.project_name||"Project"} · {new Date(r.start_at).toLocaleString("en-IN")} → {new Date(r.end_at).toLocaleString("en-IN")}</span><span>{r.phone}</span></div>
+        <div><b>{r.request_code} · {r.company_name||r.name||"Untitled Request"}</b><span>{r.project_name||"Project not entered"} · {r.start_at?new Date(r.start_at).toLocaleString("en-IN"):"Start not set"} → {r.end_at?new Date(r.end_at).toLocaleString("en-IN"):"Return not set"}</span><span>{r.phone}</span></div>
         <em className={`status ${r.status}`}>{label(r.status)}</em>
       </Link>):<p>No requests waiting for pricing.</p>}
     </div>
@@ -43,7 +43,7 @@ export default async function QuoteRequests(){
     <div className="adminPanel">
       <h2>Generated / Completed</h2>
       {generated.length?generated.map(r=><Link className="clickableQuoteRow" href={`/admin/quote-requests/${r.id}`} key={r.id}>
-        <div><b>{r.request_code} · {r.company_name||r.name}</b><span>{r.project_name||"Project"}</span></div>
+        <div><b>{r.request_code} · {r.company_name||r.name||"Untitled Request"}</b><span>{r.project_name||"Project"}</span></div>
         <em className={`status ${r.status}`}>{label(r.status)}</em>
       </Link>):<p>No generated quotations yet.</p>}
     </div>

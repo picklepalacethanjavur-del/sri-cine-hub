@@ -62,7 +62,7 @@ export function RequestDocuments({requestId,attachments,userId,compact=false}:{r
   return <div className={`adminPanel requestDocuments ${compact?"compact":""}`}>
     <div className="requestDocumentsHead">
       <div><h2>Customer Request Documents</h2><p>Keep the original PDF, image, spreadsheet, or document attached to this quote request.</p></div>
-      <label className="button ghost uploadButton">{busy?"Uploading…":"+ Upload Request"}<input ref={inputRef} hidden type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.doc,.docx,application/pdf,image/*" onChange={e=>void upload(e.target.files)} disabled={busy}/></label>
+      <button className="button ghost uploadButton" type="button" disabled={busy} onClick={()=>inputRef.current?.click()}>{busy?"Uploading…":"+ Upload Request"}</button><input ref={inputRef} style={{display:"none"}} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.doc,.docx,application/pdf,image/*" onChange={e=>void upload(e.target.files)} disabled={busy}/>
     </div>
     {attachments.length?<div className="requestDocumentList">{attachments.map(a=><div className="requestDocumentRow" key={a.id}>
       <div className="documentIcon">DOC</div>
