@@ -8,6 +8,7 @@ export function AdminNav(){
     <Link href="/admin/quotations">Quotations</Link>
     <Link href="/admin/bookings">Bookings</Link>
     <Link href="/admin/operations">Checkout / Return</Link>
+    <Link href="/admin/sub-rentals">Sub-Rentals</Link>
     <Link href="/admin/inventory">Inventory</Link>
     <Link href="/admin/kits">Kits</Link>
     <Link href="/admin/rates">Internal Rates</Link>

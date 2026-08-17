@@ -1,135 +1,45 @@
 "use client";
-import { useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import {useState} from "react";
+import {createClient} from "@/lib/supabase/client";
+import {QuotationLineEditor,type QuotationRow} from "@/components/QuotationLineEditor";
 
-type Row={id?:string;key:string;item_type:string;item_id:string|null;description:string;quantity:number;rental_days:number;internal_rate_inr:number;quoted_rate_inr:number;notes:string};
 const money=(n:number)=>`₹${Number(n||0).toLocaleString("en-IN")}`;
 
 export function QuotationEditor({quotation,items,request,cameras,accessories,kits,rates}:any){
   const supabase=createClient();
-  const [rows,setRows]=useState<Row[]>(items.map((x:any)=>({id:x.id,key:x.id,item_type:x.item_type,item_id:x.item_id,description:x.description,quantity:Number(x.quantity),rental_days:Number(x.rental_days),internal_rate_inr:Number(x.internal_rate_inr||0),quoted_rate_inr:Number(x.unit_rate_inr||0),notes:x.notes||""})));
+  const defaultRentalDays=request?Math.max(1,Math.ceil((new Date(request.end_at).getTime()-new Date(request.start_at).getTime())/86400000)):1;
+  const [rows,setRows]=useState<QuotationRow[]>(items.map((x:any)=>({
+    key:x.id,item_type:x.item_type,item_id:x.item_id||null,section_name:x.section_name||"General",requested_description:x.requested_description||x.description||"",description:x.description||"",source_type:x.source_type||((x.item_type==="service")?"service":(x.item_type==="other"?"manual":"own")),quantity:Number(x.quantity||1),rental_days:Number(x.rental_days||1),internal_rate_inr:Number(x.internal_rate_inr||0),quoted_rate_inr:Number(x.unit_rate_inr||0),supplier_name:x.supplier_name||"",supplier_cost_inr:Number(x.supplier_cost_inr||0),supplier_rate_type:x.supplier_rate_type||"daily",supplier_status:x.supplier_status||"not_required",supplier_reference:x.supplier_reference||"",notes:x.notes||""
+  })));
   const [discount,setDiscount]=useState(Number(quotation.discount_inr||0));
   const [tax,setTax]=useState(Number(quotation.tax_inr||0));
   const [otherCharges,setOtherCharges]=useState(Number(quotation.other_charges_inr||0));
   const [customerNotes,setCustomerNotes]=useState(quotation.customer_notes||"");
   const [internalNotes,setInternalNotes]=useState(quotation.internal_notes||"");
   const [savingAction,setSavingAction]=useState<"draft"|"generate"|null>(null);
-  const saving=!!savingAction;
   const [message,setMessage]=useState("");
-  const defaultRentalDays=request ? Math.max(1,Math.ceil((new Date(request.end_at).getTime()-new Date(request.start_at).getTime())/86400000)) : 1;
-
-  const subtotal=rows.reduce((n:number,r:Row)=>n+r.quantity*r.rental_days*r.quoted_rate_inr,0);
+  const saving=!!savingAction;
+  const subtotal=rows.reduce((n,r)=>n+r.quantity*r.rental_days*r.quoted_rate_inr,0);
   const total=Math.max(0,subtotal-discount+tax+otherCharges);
 
-  function patch(key:string,v:Partial<Row>){setRows(old=>old.map(r=>r.key===key?{...r,...v}:r));}
-  function remove(key:string){setRows(old=>old.filter(r=>r.key!==key));}
-  function addCustom(){setRows(old=>[...old,{key:`new:${Date.now()}`,item_type:"other",item_id:null,description:"Custom charge",quantity:1,rental_days:1,internal_rate_inr:0,quoted_rate_inr:0,notes:""}]);}
-  function addAsset(type:string,id:string){
-    if(!id)return;
-    if(type==="camera"){const c=cameras.find((x:any)=>x.id===id);const rt=rates.find((x:any)=>x.camera_id===id);if(c)setRows(old=>[...old,{key:`new:${Date.now()}`,item_type:"camera",item_id:id,description:`${c.camera_code} · ${c.name}`,quantity:1,rental_days:defaultRentalDays,internal_rate_inr:Number(rt?.daily_rate_inr||0),quoted_rate_inr:Number(rt?.daily_rate_inr||0),notes:""}]);}
-    if(type==="accessory"){const a=accessories.find((x:any)=>x.id===id);const rt=rates.find((x:any)=>x.accessory_id===id);if(a)setRows(old=>[...old,{key:`new:${Date.now()}`,item_type:"accessory",item_id:id,description:`${a.accessory_code} · ${a.name}`,quantity:1,rental_days:defaultRentalDays,internal_rate_inr:Number(rt?.daily_rate_inr||0),quoted_rate_inr:Number(rt?.daily_rate_inr||0),notes:""}]);}
-    if(type==="kit"){const k=kits.find((x:any)=>x.id===id);if(k)setRows(old=>[...old,{key:`new:${Date.now()}`,item_type:"kit",item_id:id,description:`${k.kit_code} · ${k.name}`,quantity:1,rental_days:defaultRentalDays,internal_rate_inr:Number(k.internal_daily_rate_inr||0),quoted_rate_inr:Number(k.internal_daily_rate_inr||0),notes:""}]);}
-  }
-
-  function rpcItems(){
-    return rows.map((r,i)=>({
-      item_type:r.item_type,
-      item_id:r.item_id,
-      description:r.description,
-      quantity:r.quantity,
-      rental_days:r.rental_days,
-      quoted_rate_inr:r.quoted_rate_inr,
-      internal_rate_inr:r.internal_rate_inr,
-      notes:r.notes,
-      sort_order:i
-    }));
-  }
+  function rpcItems(){return rows.map((r,i)=>({...r,item_id:r.item_id||"",sort_order:i}));}
 
   async function saveWithStatus(targetStatus:"draft"|"generated"){
     if(!rows.length){setMessage("Add at least one quotation item.");return;}
     if(quotation.status==="converted"){setMessage("Converted quotations are locked.");return;}
-    setSavingAction(targetStatus==="generated"?"generate":"draft");
-    setMessage("");
+    setSavingAction(targetStatus==="generated"?"generate":"draft");setMessage("");
     try{
-      const {error}=await supabase.rpc("save_quotation_atomic",{
-        p_quotation_id:quotation.id,
-        p_status:targetStatus,
-        p_discount_inr:discount,
-        p_tax_inr:tax,
-        p_other_charges_inr:otherCharges,
-        p_customer_notes:customerNotes,
-        p_internal_notes:internalNotes,
-        p_items:rpcItems()
-      });
-      if(error) throw error;
-      if(targetStatus==="generated"){
-        location.href=`/admin/quotations/${quotation.id}/print?generated=1`;
-      }else{
-        setMessage("Draft saved.");
-        setTimeout(()=>location.reload(),450);
-      }
-    }catch(e){
-      setMessage(e instanceof Error?e.message:"Unable to save quotation.");
-      setSavingAction(null);
-    }
+      const {error}=await supabase.rpc("save_quotation_atomic",{p_quotation_id:quotation.id,p_status:targetStatus,p_discount_inr:discount,p_tax_inr:tax,p_other_charges_inr:otherCharges,p_customer_notes:customerNotes,p_internal_notes:internalNotes,p_items:rpcItems()});
+      if(error)throw error;
+      if(targetStatus==="generated")location.href=`/admin/quotations/${quotation.id}/print?generated=1`;
+      else{setMessage("Draft saved.");setTimeout(()=>location.reload(),450);}
+    }catch(e){setMessage(e instanceof Error?e.message:"Unable to save quotation.");setSavingAction(null);}
   }
 
   return <>
-    <div className="adminPanel">
-      <div className="quotationStatusBar">
-        <div><span className={`workflowBadge ${quotation.status}`}>{String(quotation.status).replace("_"," ").toUpperCase()}</span><p className="formNote">Edit pricing here. Workflow actions such as Sent, Accepted and Convert to Booking are handled from the quotation document.</p></div>
-        <span>Valid to {quotation.valid_until||"—"}</span>
-      </div>
-    </div>
-
-    <div className="adminPanel">
-      <h2>Line-item pricing</h2>
-      <p className="formNote">Internal rate is historical reference. Quote Rate is what the customer pays.</p>
-      <div className="quoteEditorTableWrap">
-        <table className="quoteEditorTable">
-          <thead><tr><th>Item</th><th>Qty</th><th>Days</th><th>Internal Rate</th><th>Quote Rate</th><th>Amount</th><th></th></tr></thead>
-          <tbody>{rows.map(r=><tr key={r.key}>
-            <td><input className="lineDescription" value={r.description} onChange={e=>patch(r.key,{description:e.target.value})}/><input className="lineNote" value={r.notes} placeholder="Line note" onChange={e=>patch(r.key,{notes:e.target.value})}/></td>
-            <td><input type="number" min=".01" step=".01" value={r.quantity} onChange={e=>patch(r.key,{quantity:Number(e.target.value)})}/></td>
-            <td><input type="number" min=".01" step=".5" value={r.rental_days} onChange={e=>patch(r.key,{rental_days:Number(e.target.value)})}/></td>
-            <td className="internalRate">{money(r.internal_rate_inr)}</td>
-            <td><input className="priceInput" type="number" min="0" value={r.quoted_rate_inr} onChange={e=>patch(r.key,{quoted_rate_inr:Number(e.target.value)})}/></td>
-            <td><b>{money(r.quantity*r.rental_days*r.quoted_rate_inr)}</b></td>
-            <td><button className="iconButton danger" type="button" onClick={()=>remove(r.key)}>×</button></td>
-          </tr>)}</tbody>
-        </table>
-      </div>
-      <div className="addItemBar">
-        <select defaultValue="" onChange={e=>{addAsset("camera",e.target.value);e.currentTarget.value=""}}><option value="">+ Add camera</option>{cameras.map((x:any)=><option value={x.id} key={x.id}>{x.camera_code} · {x.name}</option>)}</select>
-        <select defaultValue="" onChange={e=>{addAsset("accessory",e.target.value);e.currentTarget.value=""}}><option value="">+ Add accessory</option>{accessories.map((x:any)=><option value={x.id} key={x.id}>{x.accessory_code} · {x.name}</option>)}</select>
-        <select defaultValue="" onChange={e=>{addAsset("kit",e.target.value);e.currentTarget.value=""}}><option value="">+ Add kit</option>{kits.map((x:any)=><option value={x.id} key={x.id}>{x.kit_code} · {x.name}</option>)}</select>
-        <button className="button ghost" type="button" onClick={addCustom}>+ Custom charge</button>
-      </div>
-    </div>
-
-    <div className="quoteBottomGrid">
-      <div className="adminPanel formPanel">
-        <h2>Notes</h2>
-        <label>Customer-facing notes<textarea rows={5} value={customerNotes} onChange={e=>setCustomerNotes(e.target.value)}/></label>
-        <label>Internal notes<textarea rows={5} value={internalNotes} onChange={e=>setInternalNotes(e.target.value)}/></label>
-      </div>
-      <div className="adminPanel quoteTotalsPanel">
-        <h2>Totals</h2>
-        <div><span>Subtotal</span><b>{money(subtotal)}</b></div>
-        <label><span>Overall discount</span><input type="number" value={discount} onChange={e=>setDiscount(Number(e.target.value))}/></label>
-        <label><span>Tax</span><input type="number" value={tax} onChange={e=>setTax(Number(e.target.value))}/></label>
-        <label><span>Other charges</span><input type="number" value={otherCharges} onChange={e=>setOtherCharges(Number(e.target.value))}/></label>
-        <div className="grandTotal"><span>Grand Total</span><b>{money(total)}</b></div>
-        <div className="quoteActions">
-          <button className="button ghost" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>saveWithStatus("draft")}>{savingAction==="draft"?"Saving Draft…":"Save Draft"}</button>
-          <button className="button gold" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>saveWithStatus("generated")}>{savingAction==="generate"?"Generating…":quotation.status==="draft"?"Generate Quotation":"Generate Updated Quotation"}</button>
-        </div>
-        <a className="button ghost fullWidthButton" href={`/admin/quotations/${quotation.id}/print`}>View Quotation Document</a>
-        {message&&<div className={message.includes("saved")?"successBox":"errorBox"}>{message}</div>}
-      </div>
-    </div>
-    {saving&&<div className="actionOverlay" role="status" aria-live="polite">
-      <div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating updated quotation…":"Saving quotation draft…"}</b><small>Please wait while the pricing is saved.</small></div>
-    </div>}
+    <div className="adminPanel"><div className="quotationStatusBar"><div><span className={`workflowBadge ${quotation.status}`}>{String(quotation.status).replaceAll("_"," ").toUpperCase()}</span><p className="formNote">Customer-request wording and supplier information are preserved internally. Supplier costs never appear on the customer document.</p></div><span>Valid to {quotation.valid_until||"—"}</span></div></div>
+    <div className="adminPanel pricingWorkspaceV54"><div className="panelHeading"><div><h2>Requirement & Pricing Workspace</h2><p>Match owned items, add outside rentals, and keep the original customer wording next to the final quotation description.</p></div></div><QuotationLineEditor rows={rows} onChange={setRows} cameras={cameras} accessories={accessories} kits={kits} rates={rates} defaultRentalDays={defaultRentalDays}/></div>
+    <div className="quoteBottomGrid"><div className="adminPanel formPanel"><h2>Notes</h2><label>Customer-facing notes<textarea rows={5} value={customerNotes} onChange={e=>setCustomerNotes(e.target.value)}/></label><label>Internal notes<textarea rows={5} value={internalNotes} onChange={e=>setInternalNotes(e.target.value)}/></label></div><div className="adminPanel quoteTotalsPanel"><h2>Totals</h2><div><span>Subtotal</span><b>{money(subtotal)}</b></div><label><span>Overall discount</span><input type="number" min="0" value={discount} onChange={e=>setDiscount(Number(e.target.value))}/></label><label><span>Tax</span><input type="number" min="0" value={tax} onChange={e=>setTax(Number(e.target.value))}/></label><label><span>Other charges</span><input type="number" min="0" value={otherCharges} onChange={e=>setOtherCharges(Number(e.target.value))}/></label><div className="grandTotal"><span>Grand Total</span><b>{money(total)}</b></div><div className="quoteActions"><button className="button ghost" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>void saveWithStatus("draft")}>{savingAction==="draft"?"Saving Draft…":"Save Draft"}</button><button className="button gold" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>void saveWithStatus("generated")}>{savingAction==="generate"?"Generating…":quotation.status==="draft"?"Generate Quotation":"Generate Updated Quotation"}</button></div><a className="button ghost fullWidthButton" href={`/admin/quotations/${quotation.id}/print`}>View Quotation Document</a>{message&&<div className={message.includes("saved")?"successBox":"errorBox"}>{message}</div>}</div></div>
+    {saving&&<div className="actionOverlay" role="status" aria-live="polite"><div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating updated quotation…":"Saving quotation draft…"}</b><small>Saving requirements, source details, supplier costs, and customer pricing.</small></div></div>}
   </>;
 }

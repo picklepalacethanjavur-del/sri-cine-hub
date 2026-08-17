@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
 import { requireStaff } from "@/lib/auth";
+import { NewExternalQuoteRequest } from "./NewExternalQuoteRequest";
 
 function label(status:string){
   if(status==="new") return "Received";
@@ -12,19 +13,15 @@ function label(status:string){
 }
 
 export default async function QuoteRequests(){
-  const {supabase}=await requireStaff();
-  const {data,error}=await supabase
-    .from("quote_requests")
-    .select("*")
-    .order("created_at",{ascending:false});
-
+  const {supabase,user}=await requireStaff();
+  const {data,error}=await supabase.from("quote_requests").select("*").order("created_at",{ascending:false});
   const rows=data||[];
   const active=rows.filter(r=>["new","reviewing"].includes(r.status));
   const generated=rows.filter(r=>["quoted","converted","closed"].includes(r.status));
 
   return <section className="adminShell">
     <div className="eyebrow">INCOMING CUSTOMER REQUESTS</div>
-    <h1>Quote Requests</h1>
+    <div className="pageTitleWithAction"><div><h1>Quote Requests</h1><p>Create requests from the public website or attach requirement sheets received from production companies.</p></div><NewExternalQuoteRequest userId={user.id}/></div>
     <AdminNav/>
     {error&&<div className="errorBox">{error.message}</div>}
 
@@ -38,11 +35,7 @@ export default async function QuoteRequests(){
     <div className="adminPanel">
       <h2>Received / Pricing</h2>
       {active.length?active.map(r=><Link className="clickableQuoteRow" href={`/admin/quote-requests/${r.id}`} key={r.id}>
-        <div>
-          <b>{r.request_code} · {r.company_name||r.name}</b>
-          <span>{r.project_name||"Project"} · {new Date(r.start_at).toLocaleString("en-IN")} → {new Date(r.end_at).toLocaleString("en-IN")}</span>
-          <span>{r.phone}</span>
-        </div>
+        <div><b>{r.request_code} · {r.company_name||r.name}</b><span>{r.project_name||"Project"} · {new Date(r.start_at).toLocaleString("en-IN")} → {new Date(r.end_at).toLocaleString("en-IN")}</span><span>{r.phone}</span></div>
         <em className={`status ${r.status}`}>{label(r.status)}</em>
       </Link>):<p>No requests waiting for pricing.</p>}
     </div>
@@ -50,10 +43,7 @@ export default async function QuoteRequests(){
     <div className="adminPanel">
       <h2>Generated / Completed</h2>
       {generated.length?generated.map(r=><Link className="clickableQuoteRow" href={`/admin/quote-requests/${r.id}`} key={r.id}>
-        <div>
-          <b>{r.request_code} · {r.company_name||r.name}</b>
-          <span>{r.project_name||"Project"}</span>
-        </div>
+        <div><b>{r.request_code} · {r.company_name||r.name}</b><span>{r.project_name||"Project"}</span></div>
         <em className={`status ${r.status}`}>{label(r.status)}</em>
       </Link>):<p>No generated quotations yet.</p>}
     </div>

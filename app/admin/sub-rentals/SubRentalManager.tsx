@@ -1,0 +1,26 @@
+"use client";
+import {useState} from "react";
+import {createClient} from "@/lib/supabase/client";
+
+type Row={id:string;description:string;requested_description:string|null;section_name:string;quantity:number;rental_days:number;supplier_name:string|null;supplier_cost_inr:number;supplier_rate_type:"daily"|"weekly"|"flat";customer_rate_inr:number;status:"not_checked"|"requested"|"confirmed"|"received"|"returned"|"cancelled";supplier_reference:string|null;notes:string|null;bookings:any};
+const money=(n:number)=>`₹${Number(n||0).toLocaleString("en-IN")}`;
+function supplierTotal(r:Row){const c=Number(r.supplier_cost_inr||0);if(r.supplier_rate_type==="flat")return c;if(r.supplier_rate_type==="weekly")return Number(r.quantity)*Math.ceil(Number(r.rental_days)/7)*c;return Number(r.quantity)*Number(r.rental_days)*c;}
+
+export function SubRentalManager({initialRows}:{initialRows:Row[]}){
+  const supabase=createClient();const [rows,setRows]=useState(initialRows);const [busy,setBusy]=useState<string|null>(null);const [message,setMessage]=useState("");
+  const needs=rows.filter(r=>["not_checked","requested"].includes(r.status)).length;const confirmed=rows.filter(r=>r.status==="confirmed").length;const received=rows.filter(r=>r.status==="received").length;
+  function patch(id:string,v:Partial<Row>){setRows(old=>old.map(r=>r.id===id?{...r,...v}:r));}
+  async function save(r:Row){setBusy(r.id);setMessage("");try{const {error}=await supabase.from("booking_subrentals").update({supplier_name:r.supplier_name||null,supplier_cost_inr:Number(r.supplier_cost_inr||0),supplier_rate_type:r.supplier_rate_type,status:r.status,supplier_reference:r.supplier_reference||null,notes:r.notes||null,updated_at:new Date().toISOString()}).eq("id",r.id);if(error)throw error;setMessage(`${r.description} updated.`);}catch(e){setMessage(e instanceof Error?e.message:"Unable to update sub-rental.");}finally{setBusy(null);}}
+  return <>
+    <div className="metricGrid subRentalMetrics"><div className="metric"><span>Need sourcing</span><b>{needs}</b></div><div className="metric"><span>Confirmed</span><b>{confirmed}</b></div><div className="metric"><span>Received</span><b>{received}</b></div><div className="metric"><span>Total external lines</span><b>{rows.length}</b></div></div>
+    <div className="adminPanel"><div className="panelHeading"><div><h2>External equipment checklist</h2><p>Track items Sri Cine Hub must obtain from another rental company before the customer booking goes out.</p></div></div>
+      {rows.length===0?<p>No sub-rental requirements yet.</p>:<div className="subRentalStack">{rows.map(r=>{const b=r.bookings||{};const cost=supplierTotal(r);const revenue=Number(r.quantity)*Number(r.rental_days)*Number(r.customer_rate_inr||0);return <article className={`subRentalCard sr-${r.status}`} key={r.id}>
+        <div className="subRentalCardHead"><div><span>{b.booking_code||"Booking"} · {r.section_name}</span><h3>{r.description}</h3>{r.requested_description&&r.requested_description!==r.description&&<small>Customer requested: {r.requested_description}</small>}</div><span className={`sourceBadge sub_rental`}>SUB-RENTAL</span></div>
+        <div className="subRentalMeta"><span>{b.production_name||"Client"} · {b.project_name||"Project"}</span><span>{b.start_at?new Date(b.start_at).toLocaleString("en-IN"):""} → {b.end_at?new Date(b.end_at).toLocaleString("en-IN"):""}</span><span>Qty {Number(r.quantity)} · {Number(r.rental_days)} day(s)</span></div>
+        <div className="supplierGrid operational"><label>Supplier<input value={r.supplier_name||""} onChange={e=>patch(r.id,{supplier_name:e.target.value})}/></label><label>Supplier cost<input type="number" min="0" value={Number(r.supplier_cost_inr||0)} onChange={e=>patch(r.id,{supplier_cost_inr:Number(e.target.value)})}/></label><label>Cost basis<select value={r.supplier_rate_type} onChange={e=>patch(r.id,{supplier_rate_type:e.target.value as Row["supplier_rate_type"]})}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="flat">Flat total</option></select></label><label>Status<select value={r.status} onChange={e=>patch(r.id,{status:e.target.value as Row["status"]})}><option value="not_checked">Not checked</option><option value="requested">Requested</option><option value="confirmed">Confirmed</option><option value="received">Received</option><option value="returned">Returned</option><option value="cancelled">Cancelled</option></select></label><label>Supplier reference<input value={r.supplier_reference||""} onChange={e=>patch(r.id,{supplier_reference:e.target.value})}/></label><div className="supplierMargin"><span>Supplier total</span><b>{money(cost)}</b><span>Customer revenue</span><b>{money(revenue)}</b><span>Gross margin</span><strong className={revenue-cost<0?"negative":""}>{money(revenue-cost)}</strong></div></div>
+        <div className="subRentalFooter"><input value={r.notes||""} placeholder="Supplier / pickup / return notes" onChange={e=>patch(r.id,{notes:e.target.value})}/><button className="button gold" disabled={busy===r.id} onClick={()=>void save(r)}>{busy===r.id?"Saving…":"Save"}</button></div>
+      </article>})}</div>}
+      {message&&<div className={message.includes("updated")?"successBox":"errorBox"}>{message}</div>}
+    </div>
+  </>;
+}
