@@ -24,26 +24,28 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
   const { year = String(new Date().getFullYear()) } = await searchParams;
   const allTime = year === "all";
 
-  // ARRI cameras
-  const { data: arriCams } = await supabase
-    .from("cameras")
-    .select("id,camera_code,name,manufacturer,model")
-    .or("manufacturer.ilike.%arri%,name.ilike.%arri%");
+  // ARRI cameras via investor_groups → camera_id
+  const { data: groups } = await supabase
+    .from("investor_groups")
+    .select("id,name,camera_id,cameras(id,camera_code,name)")
+    .not("camera_id", "is", null);
 
-  const camIds = (arriCams || []).map((c: any) => c.id);
+  const camIds = (groups || []).map((g: any) => g.camera_id).filter(Boolean);
+  const arriCams = (groups || []).map((g: any) => g.cameras).filter(Boolean);
 
-  // Investor breakdown for these cameras
-  const { data: investmentRows } = camIds.length > 0
+  // Investors across all groups
+  const groupIds = (groups || []).map((g: any) => g.id);
+  const { data: investorRows } = groupIds.length > 0
     ? await supabase
-        .from("camera_investments")
-        .select("investment_pct,actual_paid_usd,actual_paid_inr,investors(id,investor_code,name,location)")
-        .in("camera_id", camIds)
-        .order("investment_pct", { ascending: false })
+        .from("investors")
+        .select("id,investor_code,name,location,ownership_percent,invested_amount_usd,invested_amount_inr,notes,investor_group_id")
+        .in("investor_group_id", groupIds)
+        .order("ownership_percent", { ascending: false })
     : { data: [] };
 
-  const totalCameraInr = (investmentRows || []).reduce((n: number, r: any) => n + Number(r.actual_paid_inr || 0), 0);
+  const totalCameraInr = (investorRows || []).reduce((n: number, r: any) => n + Number(r.invested_amount_inr || 0), 0);
 
-  // Bookings
+  // Bookings for ARRI cameras
   const { data: bookingCamRows } = camIds.length > 0
     ? await supabase
         .from("booking_cameras")
@@ -81,12 +83,11 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
   ).length;
 
   // Per-investor breakdown
-  const breakdown = (investmentRows || []).map((row: any) => {
-    const inv = row.investors;
-    const share = Number(row.investment_pct || 0);
+  const breakdown = (investorRows || []).map((inv: any) => {
+    const share = Number(inv.ownership_percent || 0);
     const revenueBilled = totalBilled * share / 100;
     const revenueReceived = totalReceived * share / 100;
-    const investedInr = Number(row.actual_paid_inr || 0);
+    const investedInr = Number(inv.invested_amount_inr || 0);
     const roiPct = investedInr > 0 ? (revenueReceived / investedInr) * 100 : 0;
     return { inv, share, revenueBilled, revenueReceived, investedInr, roiPct };
   });
@@ -102,7 +103,7 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
           <p className="investPeriodLabel">{periodLabel}</p>
         </div>
         <div className="investCamList">
-          {(arriCams || []).map((c: any) => (
+          {arriCams.map((c: any) => (
             <span key={c.id} className="investCamChip">{c.camera_code} · {c.name}</span>
           ))}
         </div>
@@ -139,13 +140,11 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
             <small>balance due</small>
           </div>
         )}
-        {totalCameraInr > 0 && (
-          <div className="investMetric">
-            <span>Camera cost</span>
-            <b>{money(totalCameraInr)}</b>
-            <small>total investment</small>
-          </div>
-        )}
+        <div className="investMetric">
+          <span>Camera cost</span>
+          <b>{money(totalCameraInr)}</b>
+          <small>total investment</small>
+        </div>
       </div>
 
       {/* Investor breakdown */}
@@ -157,15 +156,15 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
               <span>Investor</span>
               <span>Share %</span>
               <span>Invested</span>
-              <span>Revenue share (billed)</span>
-              <span>Revenue share (received)</span>
+              <span>Revenue (billed)</span>
+              <span>Revenue (received)</span>
               <span>ROI recovered</span>
             </div>
             {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct }) => (
-              <div key={inv?.id || share} className="investBreakdownRow">
+              <div key={inv.id} className="investBreakdownRow">
                 <div>
-                  <b>{inv?.name || "—"}</b>
-                  {inv?.location && <small>{inv.location}</small>}
+                  <b>{inv.name}</b>
+                  {inv.location && <small>{inv.location}</small>}
                 </div>
                 <span className="investSharePct">{pct(share)}</span>
                 <span>{money(investedInr)}</span>
