@@ -6,7 +6,7 @@ type Props={onCode:(code:string,method:ScanMethod)=>void; title?:string};
 
 export function normalizeAssetCode(raw:string){
   const value=(raw||"").trim().toUpperCase();
-  const match=value.match(/SCH-(?:CAM|ACC)-[A-Z0-9-]+/i);
+  const match=value.match(/SCH-[A-Z0-9-]+/i);
   return (match?.[0]||value).trim().toUpperCase();
 }
 

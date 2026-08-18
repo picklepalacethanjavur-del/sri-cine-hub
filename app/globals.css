@@ -129,3 +129,11 @@ button:disabled, .button:disabled, .smallButton:disabled {
 .checkoutOverrideBox{border:1px solid #66501f;background:#1a160c;border-radius:12px;padding:14px;margin:14px 0 20px;display:grid;gap:12px}
 .overrideToggle{display:flex!important;grid-template-columns:none!important;align-items:flex-start;gap:10px!important;cursor:pointer}
 .overrideToggle input{width:auto!important;margin-top:3px}.overrideToggle span{display:grid;gap:4px}.overrideToggle small{color:var(--muted);font-weight:400;line-height:1.4}
+
+/* V6.2 QA hardening: visible labels, dense forms, verification */
+.formPanel label,.supplierAddDetails label,.supplierCatalogAdd label,.masterCatalogQuickAdd label,.rfqPickPanel label,.rfqCurrentPanel label{display:grid;gap:6px;color:#ded9cf;font-size:12px;font-weight:800}
+.formPanel label small,.supplierCatalogAdd label small,.rfqPickPanel label small{color:var(--muted);font-weight:400}
+.assetChecklistFieldset{border:1px solid var(--line);border-radius:11px;margin:12px 0;padding:12px}.assetChecklistFieldset legend{padding:0 7px;color:var(--gold2);font-size:12px;font-weight:800}
+.quoteSourceSearch{display:grid;gap:6px;padding:14px 14px 8px;color:#ded9cf;font-size:12px;font-weight:800}.quoteSourceSearch>div{position:relative}.quoteSourceSearch input{padding-right:42px}.quoteSourceSearch button{right:8px;top:50%;transform:translateY(-50%)}
+.rfqDescriptionLabel{min-width:0}.rfqDescriptionLabel small{color:var(--muted);font-weight:400}.rfqDescriptionLabel input{width:100%}
+.checkoutVerificationRow em{min-width:84px;text-align:center}.assetOperation>span{display:block;color:var(--muted);font-size:12px;margin:-4px 0 10px}

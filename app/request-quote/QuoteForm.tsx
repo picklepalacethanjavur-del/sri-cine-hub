@@ -125,10 +125,10 @@ export default function QuoteForm() {
   const groups = useMemo(() => buildGroups(assets), [assets]);
 
   const categories = useMemo(() => {
-    const present = new Set(groups.map((group) => group.category));
+    const present = new Set<string>(groups.map((group: EquipmentGroup) => group.category));
     const ordered = CATEGORY_ORDER.filter((category) => present.has(category));
     const extras = Array.from(present)
-      .filter((category) => !CATEGORY_ORDER.includes(category))
+      .filter((category: string) => !CATEGORY_ORDER.includes(category))
       .sort();
     return ["All", ...ordered, ...extras];
   }, [groups]);
@@ -409,7 +409,7 @@ export default function QuoteForm() {
                 <div className="emptyEquipmentSearch">No equipment matches your search.</div>
               )}
 
-              {Array.from(groupsByCategory.entries()).map(([category, categoryGroups]) => (
+              {(Array.from(groupsByCategory.entries()) as Array<[string, EquipmentGroup[]]>).map(([category, categoryGroups]) => (
                 <section className="equipmentCategory" key={category}>
                   <div className="equipmentCategoryHead">
                     <h3>{category}</h3>

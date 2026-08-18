@@ -139,7 +139,7 @@ export function QuotationLineEditor({
       </div>
 
       {tab!=="manual"&&<>
-        <div className="quoteSourceSearch"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tab==="inventory"?"Search our cameras, lenses, lights, grip…":"Search supplier equipment or supplier name…"}/>{search&&<button type="button" onClick={()=>setSearch("")}>×</button>}</div>
+        <label className="quoteSourceSearch"><span>Search equipment</span><div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tab==="inventory"?"Search our cameras, lenses, lights, grip…":"Search supplier equipment or supplier name…"}/>{search&&<button type="button" onClick={()=>setSearch("")} aria-label="Clear equipment search">×</button>}</div></label>
         <div className="quoteCategoryChips">{categories.map(c=><button type="button" key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
       </>}
 
@@ -171,7 +171,7 @@ export function QuotationLineEditor({
                 <span className="compactLineNumber">{index+1}</span>
                 <div><b>{r.description||r.requested_description||"Untitled item"}</b><small>{r.section_name} · <em className={`sourceBadge ${r.source_type}`}>{r.source_type==="own"?"OWN":r.source_type==="supplier"?"SUPPLIER":r.source_type==="service"?"SERVICE":"MANUAL"}</em>{r.source_type==="supplier"&&r.supplier_name?` · ${r.supplier_name}`:""}</small></div>
               </button>
-              <div className="compactLineNumbers"><label>Qty<input type="number" min="0" step="1" value={r.quantity} onChange={e=>patch(r.key,{quantity:Number(e.target.value)})}/></label><label>Days<input type="number" min="0" step=".5" value={r.rental_days} onChange={e=>patch(r.key,{rental_days:Number(e.target.value)})}/></label><label>Rate<input type="number" min="0" value={r.quoted_rate_inr} onChange={e=>patch(r.key,{quoted_rate_inr:Number(e.target.value)})}/></label><strong>{money(amount)}</strong><button type="button" className="iconButton danger" onClick={()=>remove(r.key)}>×</button></div>
+              <div className="compactLineNumbers"><label>Qty<input type="number" min="0" step="1" value={r.quantity} onChange={e=>patch(r.key,{quantity:Number(e.target.value)})}/></label><label>Days<input type="number" min="0" step=".5" value={r.rental_days} onChange={e=>patch(r.key,{rental_days:Number(e.target.value)})}/></label><label>Rate<input type="number" min="0" value={r.quoted_rate_inr} onChange={e=>patch(r.key,{quoted_rate_inr:Number(e.target.value)})}/></label><strong>{money(amount)}</strong><button type="button" className="iconButton danger" onClick={()=>remove(r.key)} aria-label={`Remove ${r.description||r.requested_description||"quotation item"}`}>×</button></div>
             </div>
             {open&&<div className="compactLineDetails">
               <label>Section<input list="quote-section-presets" value={r.section_name} onChange={e=>patch(r.key,{section_name:e.target.value})}/></label>
