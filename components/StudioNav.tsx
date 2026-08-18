@@ -15,6 +15,7 @@ const TOOLS = [
   { href: "/studio/inventory", label: "Inventory" },
   { href: "/studio/suppliers", label: "Suppliers" },
   { href: "/admin",            label: "Admin panel" },
+  { href: "/invest",           label: "Investor portal" },
 ];
 
 export function StudioNav({ name }: { name: string }) {
