@@ -203,7 +203,7 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
               <span>Paid out</span>
               <span>ROI recovered</span>
             </div>
-            {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct, paidOut }) => (
+            {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct, paidOut }: { inv: any; share: number; revenueBilled: number; revenueReceived: number; investedInr: number; roiPct: number; paidOut: number }) => (
               <div key={inv.id} className="investBreakdownRow investBreakdownRow7">
                 <div>
                   <b>{inv.name}</b>
