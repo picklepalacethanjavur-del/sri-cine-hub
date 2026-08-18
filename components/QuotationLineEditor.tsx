@@ -118,7 +118,7 @@ export function QuotationLineEditor({
   }
   function addManual(source:SourceType){
     const service=source==="service";
-    const row:QuotationRow={key:`${source}:${Date.now()}`,item_type:service?"service":"other",item_id:null,request_item_id:null,catalog_item_id:null,supplier_id:null,supplier_catalog_item_id:null,section_name:service?"Crew":"Other",requested_description:"",description:"",source_type:source,quantity:1,rental_days:service?1:defaultRentalDays,internal_rate_inr:0,cost_rate_inr:0,cost_rate_basis:"daily",quoted_rate_inr:0,supplier_name:"",supplier_status:"not_required",supplier_reference:"",notes:""};
+    const row:QuotationRow={key:`${source}:${Date.now()}`,item_type:service?"service":"other",item_id:null,request_item_id:null,catalog_item_id:null,supplier_id:null,supplier_catalog_item_id:null,section_name:service?"Crew":"Other",requested_description:"",description:"",source_type:source,quantity:1,rental_days:defaultRentalDays,internal_rate_inr:0,cost_rate_inr:0,cost_rate_basis:"daily",quoted_rate_inr:0,supplier_name:"",supplier_status:"not_required",supplier_reference:"",notes:""};
     add(row);
   }
 
