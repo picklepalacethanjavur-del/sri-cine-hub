@@ -143,17 +143,30 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
     setSaving(status === "generated" ? "generate" : "draft");
     setMsg("");
     try {
+      // Map studio source_type to DB item_type and source_type enums
+      // item_type: 'camera' | 'accessory' | 'kit' | 'other'
+      // source_type: 'own' | 'supplier' | 'manual' | 'service'
+      function dbItemType(st: string) {
+        if (st === "own_camera") return "camera";
+        if (st === "own_accessory") return "accessory";
+        return "other";
+      }
+      function dbSourceType(st: string) {
+        if (st === "own_camera" || st === "own_accessory") return "own";
+        if (st === "supplier") return "supplier";
+        return "manual";
+      }
       const items = lines.map((l, i) => ({
         item_id: l.item_id || null,
         request_item_id: null,
         catalog_item_id: null,
-        item_type: l.source_type,
+        item_type: dbItemType(l.source_type),
         description: l.description,
         section_name: l.section_name,
         quantity: l.quantity,
         rental_days: l.rental_days,
         quoted_rate_inr: l.quoted_rate_inr,
-        source_type: l.source_type,
+        source_type: dbSourceType(l.source_type),
         supplier_id: l.supplier_id || null,
         supplier_catalog_item_id: l.supplier_catalog_item_id || null,
         internal_cost_inr: l.internal_cost_inr,
