@@ -3,6 +3,7 @@ import {AdminNav} from "@/components/AdminNav";
 import {requireStaff} from "@/lib/auth";
 import {RequestDocuments} from "@/components/RequestDocuments";
 import {PricingWorkspace} from "./PricingWorkspace";
+import {RequestCorrectionPanel} from "@/components/RequestCorrectionPanel";
 
 export default async function QuoteRequestDetail({params}:{params:Promise<{id:string}>}){
   const {id}=await params;const {supabase,user}=await requireStaff();
@@ -17,5 +18,5 @@ export default async function QuoteRequestDetail({params}:{params:Promise<{id:st
     supabase.from("quote_request_attachments").select("id,file_name,file_path,content_type,file_size,created_at").eq("quote_request_id",id).order("created_at",{ascending:false})
   ]);
   if(!req)notFound();
-  return <section className="adminShell v6AdminShell"><div className="eyebrow">QUOTE REQUEST {req.request_code}</div><h1>{req.company_name||req.name||"Untitled Request"}</h1><AdminNav/><RequestDocuments requestId={id} attachments={attachments||[]} userId={user.id} compact/><PricingWorkspace request={req} cameras={cameras||[]} accessories={accessories||[]} kits={kits||[]} rates={rates||[]} supplierItems={supplierItems||[]} existingQuotes={existingQuotes||[]}/></section>;
+  return <section className="adminShell v6AdminShell"><div className="eyebrow">QUOTE REQUEST {req.request_code}</div><h1>{req.company_name||req.name||"Untitled Request"}</h1><AdminNav/><RequestCorrectionPanel request={req}/><RequestDocuments requestId={id} attachments={attachments||[]} userId={user.id} compact/><PricingWorkspace request={req} cameras={cameras||[]} accessories={accessories||[]} kits={kits||[]} rates={rates||[]} supplierItems={supplierItems||[]} existingQuotes={existingQuotes||[]}/></section>;
 }

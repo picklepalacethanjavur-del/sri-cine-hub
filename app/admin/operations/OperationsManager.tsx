@@ -12,9 +12,9 @@ type AssetRef={
   label:string;
 };
 
-export function OperationsManager({bookings,userId}:{bookings:any[];userId:string}){
+export function OperationsManager({bookings,userId,initialBookingId=""}:{bookings:any[];userId:string;initialBookingId?:string}){
   const supabase=createClient();
-  const [bookingId,setBookingId]=useState("");
+  const [bookingId,setBookingId]=useState(initialBookingId);
   const [verified,setVerified]=useState<string[]>([]);
   const [msg,setMsg]=useState("");
   const [busy,setBusy]=useState<"checkout"|"return"|null>(null);
@@ -266,8 +266,8 @@ export function OperationsManager({bookings,userId}:{bookings:any[];userId:strin
         <label>Accessory return photo <small>(optional)</small><input name={`return-photo-accessory-${ba.accessory_id}`} type="file" accept="image/*" capture="environment"/></label>
       </div>)}
       <div className="formGrid"><label>Damage charges ₹<input name="damage" type="number" min="0" defaultValue="0"/></label><label>Late charges ₹<input name="late" type="number" min="0" defaultValue="0"/></label></div>
-      <div className="formGrid"><label>Other charges ₹<input name="other" type="number" min="0" defaultValue="0"/></label><label>Total amount paid ₹<input name="paid" type="number" min="0" defaultValue="0"/></label></div>
-      <div className="formGrid"><label>Payment method<select name="method" defaultValue=""><option value="">Not specified</option><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Card</option></select></label><label>Payment reference<input name="reference" placeholder="UPI / bank / card reference"/></label></div>
+      <div className="formGrid"><label>Other charges ₹<input name="other" type="number" min="0" defaultValue="0"/></label><label>Payment received now ₹ <small>(optional)</small><input name="paid" type="number" min="0" defaultValue="0"/></label></div>
+      <p className="formNote">You can complete the return with ₹0 paid and record payments later from the receipt. Payment history is preserved as a ledger.</p><div className="formGrid"><label>Payment method<select name="method" defaultValue=""><option value="">Not specified</option><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Card</option></select></label><label>Payment reference<input name="reference" placeholder="UPI / bank / card reference"/></label></div>
       <label>Return / damage notes<textarea name="notes" placeholder="Optional notes"/></label>
       <button type="submit" className="button gold" disabled={!!busy}>{busy==="return"?"Processing Return…":missing.length&&!overrideMissing?`Verify ${missing.length} item${missing.length===1?"":"s"} to return`:"Return equipment & generate receipt"}</button>
     </form>}
