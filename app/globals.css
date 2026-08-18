@@ -567,6 +567,23 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investBadge.reserved,.investBadge.confirmed{background:#1a2535;border-color:#365270;color:#a8d0ff}
 .investBadge.cancelled{background:#2a1f1f;border-color:#5a3535;color:#ffc0c0}
 .investEmpty{color:var(--muted);font-size:13px;padding:8px 0}
+.investPeriodLabel{font-size:12px;color:var(--muted);margin-top:4px}
+.investYearFilter{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.investYearFilter>span{font-size:10px;font-weight:900;letter-spacing:.1em;color:var(--muted)}
+.investYearChips{display:flex;gap:6px;flex-wrap:wrap}
+.investYearChip{padding:5px 14px;border-radius:999px;border:1px solid var(--line);background:#111;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.investYearChip:hover{border-color:#6b6558;color:var(--text)}
+.investYearChip.active{background:#2a2210;border-color:var(--gold);color:var(--gold2)}
+.investBreakdownTable{display:grid;gap:0}
+.investBreakdownHead{display:grid;grid-template-columns:1fr 70px 120px 180px 180px 110px;gap:10px;padding:8px 10px;font-size:10px;font-weight:900;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--line)}
+.investBreakdownRow{display:grid;grid-template-columns:1fr 70px 120px 180px 180px 110px;gap:10px;padding:12px 10px;border-bottom:1px solid var(--line);align-items:center}
+.investBreakdownRow:last-child{border-bottom:none}
+.investBreakdownRow b{font-size:13px}
+.investBreakdownRow small{display:block;font-size:11px;color:var(--muted)}
+.investSharePct{font-size:13px;font-weight:800;color:var(--gold2)}
+.investReceived{font-size:13px;font-weight:700;color:#b8f2cb}
+.investRoi{font-size:13px;font-weight:700;color:var(--muted)}
+.investRoi.full{color:#6fcf6f}
 .investBalanceDue{font-size:11px;color:#ffbb66;background:#3a2810;border:1px solid #7a5620;border-radius:999px;padding:3px 8px}
 @media(max-width:600px){.investHeader{padding:14px 16px}.investMain{padding:20px 16px 60px}}
 

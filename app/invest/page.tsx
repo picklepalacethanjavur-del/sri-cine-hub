@@ -1,7 +1,11 @@
 import { requireInvestor } from "@/lib/auth";
 import Link from "next/link";
+import { Suspense } from "react";
+import { YearFilter } from "./YearFilter";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const pct = (n: number) => `${Number(n || 0).toFixed(1)}%`;
+
 function fmtDate(v?: string | null) {
   if (!v) return "—";
   return new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -15,9 +19,12 @@ function statusLabel(s: string) {
   return m[s] || s;
 }
 
-export default async function InvestPage() {
+export default async function InvestPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
   const { supabase } = await requireInvestor();
+  const { year = String(new Date().getFullYear()) } = await searchParams;
+  const allTime = year === "all";
 
+  // ARRI cameras
   const { data: arriCams } = await supabase
     .from("cameras")
     .select("id,camera_code,name,manufacturer,model")
@@ -25,6 +32,18 @@ export default async function InvestPage() {
 
   const camIds = (arriCams || []).map((c: any) => c.id);
 
+  // Investor breakdown for these cameras
+  const { data: investmentRows } = camIds.length > 0
+    ? await supabase
+        .from("camera_investments")
+        .select("investment_pct,actual_paid_usd,actual_paid_inr,investors(id,investor_code,name,location)")
+        .in("camera_id", camIds)
+        .order("investment_pct", { ascending: false })
+    : { data: [] };
+
+  const totalCameraInr = (investmentRows || []).reduce((n: number, r: any) => n + Number(r.actual_paid_inr || 0), 0);
+
+  // Bookings
   const { data: bookingCamRows } = camIds.length > 0
     ? await supabase
         .from("booking_cameras")
@@ -35,12 +54,16 @@ export default async function InvestPage() {
   const bookingMap = new Map<string, any>();
   for (const row of (bookingCamRows || [])) {
     const b = (row as any).bookings;
-    if (b && !bookingMap.has(b.id)) bookingMap.set(b.id, b);
+    if (!b) continue;
+    if (allTime || new Date(b.start_at).getFullYear() === Number(year)) {
+      if (!bookingMap.has(b.id)) bookingMap.set(b.id, b);
+    }
   }
   const bookings = Array.from(bookingMap.values()).sort((a: any, b: any) =>
     new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
   );
 
+  // Receipts
   const bookingIds = bookings.map((b: any) => b.id);
   const { data: receipts } = bookingIds.length > 0
     ? await supabase
@@ -57,12 +80,26 @@ export default async function InvestPage() {
     ["checked_out", "overdue", "reserved", "confirmed", "preparing"].includes(b.status)
   ).length;
 
+  // Per-investor breakdown
+  const breakdown = (investmentRows || []).map((row: any) => {
+    const inv = row.investors;
+    const share = Number(row.investment_pct || 0);
+    const revenueBilled = totalBilled * share / 100;
+    const revenueReceived = totalReceived * share / 100;
+    const investedInr = Number(row.actual_paid_inr || 0);
+    const roiPct = investedInr > 0 ? (revenueReceived / investedInr) * 100 : 0;
+    return { inv, share, revenueBilled, revenueReceived, investedInr, roiPct };
+  });
+
+  const periodLabel = allTime ? "All time" : `Jan–Dec ${year}`;
+
   return (
     <div className="investPage">
       <div className="investPageHeader">
         <div>
           <p className="investEyebrow">ARRI INVESTMENT PORTFOLIO</p>
           <h1 className="investH1">Booking Performance</h1>
+          <p className="investPeriodLabel">{periodLabel}</p>
         </div>
         <div className="investCamList">
           {(arriCams || []).map((c: any) => (
@@ -71,6 +108,9 @@ export default async function InvestPage() {
         </div>
       </div>
 
+      <Suspense><YearFilter currentYear={year} /></Suspense>
+
+      {/* Top metrics */}
       <div className="investMetrics">
         <div className="investMetric">
           <span>Total booked</span>
@@ -85,7 +125,7 @@ export default async function InvestPage() {
         <div className="investMetric gold">
           <span>Total billed</span>
           <b>{money(totalBilled)}</b>
-          <small>across all bookings</small>
+          <small>{periodLabel}</small>
         </div>
         <div className="investMetric gold">
           <span>Received</span>
@@ -99,11 +139,49 @@ export default async function InvestPage() {
             <small>balance due</small>
           </div>
         )}
+        {totalCameraInr > 0 && (
+          <div className="investMetric">
+            <span>Camera cost</span>
+            <b>{money(totalCameraInr)}</b>
+            <small>total investment</small>
+          </div>
+        )}
       </div>
 
+      {/* Investor breakdown */}
+      {breakdown.length > 0 && (
+        <section className="investCard">
+          <h2 className="investCardTitle">Investor Revenue Share · {periodLabel}</h2>
+          <div className="investBreakdownTable">
+            <div className="investBreakdownHead">
+              <span>Investor</span>
+              <span>Share %</span>
+              <span>Invested</span>
+              <span>Revenue share (billed)</span>
+              <span>Revenue share (received)</span>
+              <span>ROI recovered</span>
+            </div>
+            {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct }) => (
+              <div key={inv?.id || share} className="investBreakdownRow">
+                <div>
+                  <b>{inv?.name || "—"}</b>
+                  {inv?.location && <small>{inv.location}</small>}
+                </div>
+                <span className="investSharePct">{pct(share)}</span>
+                <span>{money(investedInr)}</span>
+                <span>{money(revenueBilled)}</span>
+                <span className="investReceived">{money(revenueReceived)}</span>
+                <span className={`investRoi${roiPct >= 100 ? " full" : ""}`}>{pct(roiPct)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Bookings */}
       <section className="investCard">
-        <h2 className="investCardTitle">All ARRI Bookings</h2>
-        {bookings.length === 0 && <p className="investEmpty">No bookings recorded yet.</p>}
+        <h2 className="investCardTitle">All ARRI Bookings · {periodLabel}</h2>
+        {bookings.length === 0 && <p className="investEmpty">No bookings in this period.</p>}
         {bookings.map((b: any) => (
           <div key={b.id} className="investRow">
             <div className="investRowInfo">
@@ -118,6 +196,7 @@ export default async function InvestPage() {
         ))}
       </section>
 
+      {/* Receipts */}
       {(receipts || []).length > 0 && (
         <section className="investCard">
           <h2 className="investCardTitle">Revenue · Receipts</h2>
