@@ -356,7 +356,7 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 @media(max-width:480px){.hubGrid{grid-template-columns:1fr}}
 
 /* ── Admin nav v7 ── */
-.adminNav a.active{background:#211c10;color:var(--gold2);border-color:#5a4e30}
+.adminNav a.active{background:#211c10;color:var(--gold2);border-color:#5a4e30}.adminNavStudio{margin-left:auto;background:#1a1600!important;border-color:#4a3d10!important;color:var(--gold2)!important;font-weight:800}
 
 /* =========================================================
    Studio V7 — Rental Manager Studio

@@ -23,6 +23,7 @@ export function AdminNav() {
           {label}
         </Link>
       ))}
+      <Link href="/studio" className="adminNavStudio">Studio →</Link>
     </nav>
   );
 }
