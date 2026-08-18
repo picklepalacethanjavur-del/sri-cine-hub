@@ -79,6 +79,7 @@ export function AssetScanner({onCode,title="Scan equipment QR"}:Props){
         onChange={e=>setManual(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();useManual();}}}
         placeholder="Enter e.g. SCH-CAM-001"
+        aria-label="Equipment QR or asset code"
         autoCapitalize="characters"
         autoCorrect="off"
       />

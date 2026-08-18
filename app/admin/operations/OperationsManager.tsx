@@ -74,21 +74,18 @@ export function OperationsManager({bookings,userId}:{bookings:any[];userId:strin
     setMsg(`${code} verified.`);
   }
 
-  async function uploadEvidence(file:File,asset:AssetRef,evidenceType:"checkout_hours"|"return_hours"|"condition"|"damage",hours?:number){
-    if(!b)return;
-    const path=`${b.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
-    const up=await supabase.storage.from("rental-evidence").upload(path,file);
+  async function uploadEvidenceFile(file:File){
+    if(!b)throw new Error("Booking not selected.");
+    const path=`${b.id}/${Date.now()}-${crypto.randomUUID().slice(0,8)}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+    const up=await supabase.storage.from("rental-evidence").upload(path,file,{contentType:file.type||undefined,upsert:false});
     if(up.error)throw up.error;
-    const ev=await supabase.from("evidence").insert({
-      booking_id:b.id,
-      camera_id:asset.kind==="camera"?asset.assetId:null,
-      accessory_id:asset.kind==="accessory"?asset.assetId:null,
-      evidence_type:evidenceType,
-      file_path:path,
-      camera_hours:asset.kind==="camera"?(hours??null):null,
-      captured_by:userId
-    });
-    if(ev.error)throw ev.error;
+    return path;
+  }
+
+  async function cleanupUploadedEvidence(paths:string[]){
+    if(!paths.length)return;
+    const {error}=await supabase.storage.from("rental-evidence").remove(paths);
+    if(error)console.warn("Evidence cleanup failed",error.message);
   }
 
   async function recordManualOverride(codes:string[],scanType:"checkout"|"return"){
@@ -132,37 +129,34 @@ export function OperationsManager({bookings,userId}:{bookings:any[];userId:strin
     if(stillMissing===null)return;
 
     setBusy("checkout");setMsg("");
+    const uploadedPaths:string[]=[];
     try{
       if(stillMissing.length)await recordManualOverride(stillMissing,"checkout");
+      const items:any[]=[];
 
       for(const bc of b.booking_cameras||[]){
         const hours=Number(f.get(`hours-${bc.camera_id}`)||0);
-        const cond=String(f.get(`condition-${bc.camera_id}`)||"good");
-        const line=await supabase.from("booking_cameras").update({checkout_hours:hours,condition_out:cond}).eq("id",bc.id);
-        if(line.error)throw line.error;
-        const cam=await supabase.from("cameras").update({status:"out",current_hours:hours}).eq("id",bc.camera_id);
-        if(cam.error)throw cam.error;
+        const condition=String(f.get(`condition-${bc.camera_id}`)||"good");
         const file=f.get(`photo-camera-${bc.camera_id}`);
-        const asset=expectedAssets.find(x=>x.kind==="camera"&&x.assetId===bc.camera_id);
-        if(asset&&file instanceof File&&file.size)await uploadEvidence(file,asset,"checkout_hours",hours);
+        if(!(file instanceof File)||!file.size)throw new Error(`Checkout proof photo is required for ${bc.cameras?.camera_code||"camera"}.`);
+        const evidencePath=await uploadEvidenceFile(file);uploadedPaths.push(evidencePath);
+        items.push({kind:"camera",asset_id:bc.camera_id,hours,condition,evidence_path:evidencePath});
       }
 
       for(const ba of b.booking_accessories||[]){
-        const cond=String(f.get(`condition-${ba.accessory_id}`)||"good");
-        const line=await supabase.from("booking_accessories").update({condition_out:cond}).eq("id",ba.id);
-        if(line.error)throw line.error;
-        const accessory=await supabase.from("accessories").update({status:"out"}).eq("id",ba.accessory_id);
-        if(accessory.error)throw accessory.error;
+        const condition=String(f.get(`condition-${ba.accessory_id}`)||"good");
         const file=f.get(`photo-accessory-${ba.accessory_id}`);
-        const asset=expectedAssets.find(x=>x.kind==="accessory"&&x.assetId===ba.accessory_id);
-        if(asset&&file instanceof File&&file.size)await uploadEvidence(file,asset,"condition");
+        let evidencePath:string|null=null;
+        if(file instanceof File&&file.size){evidencePath=await uploadEvidenceFile(file);uploadedPaths.push(evidencePath);}
+        items.push({kind:"accessory",asset_id:ba.accessory_id,condition,evidence_path:evidencePath});
       }
 
-      const bookingUpdate=await supabase.from("bookings").update({status:"checked_out",checked_out_at:new Date().toISOString()}).eq("id",b.id);
-      if(bookingUpdate.error)throw bookingUpdate.error;
+      const {error}=await supabase.rpc("checkout_booking_atomic",{p_booking_id:b.id,p_items:items});
+      if(error)throw error;
       setMsg(stillMissing.length?"Checkout completed with authorized verification override.":"Checkout completed.");
       setTimeout(()=>location.reload(),700);
     }catch(err){
+      await cleanupUploadedEvidence(uploadedPaths);
       setMsg(err instanceof Error?err.message:"Checkout failed.");
       setBusy(null);
     }
@@ -177,45 +171,39 @@ export function OperationsManager({bookings,userId}:{bookings:any[];userId:strin
     if(stillMissing===null)return;
 
     setBusy("return");setMsg("");
+    const uploadedPaths:string[]=[];
     try{
       if(stillMissing.length)await recordManualOverride(stillMissing,"return");
+      const items:any[]=[];
 
-      let hasDamagedAsset=false;
       for(const bc of b.booking_cameras||[]){
         const hours=Number(f.get(`return-hours-${bc.camera_id}`)||0);
-        const cond=String(f.get(`return-condition-${bc.camera_id}`)||"good");
-        if(cond==="damaged"||cond==="missing")hasDamagedAsset=true;
-        const line=await supabase.from("booking_cameras").update({return_hours:hours,condition_in:cond}).eq("id",bc.id);
-        if(line.error)throw line.error;
-        const cam=await supabase.from("cameras").update({status:cond==="good"||cond==="fair"?"available":"maintenance",current_hours:hours}).eq("id",bc.camera_id);
-        if(cam.error)throw cam.error;
+        const condition=String(f.get(`return-condition-${bc.camera_id}`)||"good");
         const file=f.get(`return-photo-camera-${bc.camera_id}`);
-        const asset=expectedAssets.find(x=>x.kind==="camera"&&x.assetId===bc.camera_id);
-        if(asset&&file instanceof File&&file.size)await uploadEvidence(file,asset,cond==="damaged"||cond==="missing"?"damage":"return_hours",hours);
+        if(!(file instanceof File)||!file.size)throw new Error(`Return proof photo is required for ${bc.cameras?.camera_code||"camera"}.`);
+        const evidencePath=await uploadEvidenceFile(file);uploadedPaths.push(evidencePath);
+        items.push({kind:"camera",asset_id:bc.camera_id,hours,condition,evidence_path:evidencePath});
       }
 
       for(const ba of b.booking_accessories||[]){
-        const cond=String(f.get(`return-condition-${ba.accessory_id}`)||"good");
-        if(cond==="damaged"||cond==="missing")hasDamagedAsset=true;
-        const line=await supabase.from("booking_accessories").update({condition_in:cond}).eq("id",ba.id);
-        if(line.error)throw line.error;
-        const accessory=await supabase.from("accessories").update({status:cond==="good"||cond==="fair"?"available":"maintenance"}).eq("id",ba.accessory_id);
-        if(accessory.error)throw accessory.error;
+        const condition=String(f.get(`return-condition-${ba.accessory_id}`)||"good");
         const file=f.get(`return-photo-accessory-${ba.accessory_id}`);
-        const asset=expectedAssets.find(x=>x.kind==="accessory"&&x.assetId===ba.accessory_id);
-        if(asset&&file instanceof File&&file.size)await uploadEvidence(file,asset,cond==="damaged"||cond==="missing"?"damage":"condition");
+        let evidencePath:string|null=null;
+        if(file instanceof File&&file.size){evidencePath=await uploadEvidenceFile(file);uploadedPaths.push(evidencePath);}
+        items.push({kind:"accessory",asset_id:ba.accessory_id,condition,evidence_path:evidencePath});
       }
 
-      const damage=Number(f.get("damage")||0),late=Number(f.get("late")||0),other=Number(f.get("other")||0),paid=Number(f.get("paid")||0);
-      const rental=Number(b.quoted_total_inr||0);
-      const balance=Math.max(0,rental+damage+late+other-paid);
-      const bookingUpdate=await supabase.from("bookings").update({status:"returned",returned_at:new Date().toISOString(),amount_received_inr:paid,payment_status:balance>0?"partial":"paid"}).eq("id",b.id);
-      if(bookingUpdate.error)throw bookingUpdate.error;
-      const receipt=await supabase.from("receipts").upsert({booking_id:b.id,customer_id:b.customer_id,rental_amount_inr:rental,damage_charges_inr:damage,late_charges_inr:late,other_charges_inr:other,amount_paid_inr:paid,balance_inr:balance,payment_method:String(f.get("method")||""),payment_reference:String(f.get("reference")||""),return_notes:String(f.get("notes")||"")+(hasDamagedAsset?"\nOne or more owned assets were marked damaged/missing and moved to maintenance.":""),issued_by:userId},{onConflict:"booking_id"});
-      if(receipt.error)throw receipt.error;
+      const {data,error}=await supabase.rpc("return_booking_atomic",{
+        p_booking_id:b.id,p_items:items,
+        p_damage_inr:Number(f.get("damage")||0),p_late_inr:Number(f.get("late")||0),p_other_inr:Number(f.get("other")||0),p_paid_inr:Number(f.get("paid")||0),
+        p_payment_method:String(f.get("method")||"")||null,p_payment_reference:String(f.get("reference")||"")||null,p_notes:String(f.get("notes")||"")||null
+      });
+      if(error)throw error;
+      const result=data as {receipt_id?:string;receipt_code?:string};
       setMsg(stillMissing.length?"Return completed with authorized verification override; receipt generated.":"Return completed and receipt generated.");
-      setTimeout(()=>location.href="/admin/receipts",900);
+      setTimeout(()=>{location.href=result?.receipt_id?`/admin/receipts/${result.receipt_id}/print?generated=1`:"/admin/receipts";},850);
     }catch(err){
+      await cleanupUploadedEvidence(uploadedPaths);
       setMsg(err instanceof Error?err.message:"Return failed.");
       setBusy(null);
     }

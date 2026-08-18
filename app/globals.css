@@ -137,3 +137,6 @@ button:disabled, .button:disabled, .smallButton:disabled {
 .quoteSourceSearch{display:grid;gap:6px;padding:14px 14px 8px;color:#ded9cf;font-size:12px;font-weight:800}.quoteSourceSearch>div{position:relative}.quoteSourceSearch input{padding-right:42px}.quoteSourceSearch button{right:8px;top:50%;transform:translateY(-50%)}
 .rfqDescriptionLabel{min-width:0}.rfqDescriptionLabel small{color:var(--muted);font-weight:400}.rfqDescriptionLabel input{width:100%}
 .checkoutVerificationRow em{min-width:84px;text-align:center}.assetOperation>span{display:block;color:var(--muted);font-size:12px;margin:-4px 0 10px}
+
+/* V6.3 compact request file picker */
+.requestFilePicker{display:grid;gap:8px}.requestFilePicker .fieldLabel{font-weight:700}.requestFilePicker small{color:var(--muted);overflow-wrap:anywhere}
