@@ -2,6 +2,7 @@ import { requireInvestor } from "@/lib/auth";
 import Link from "next/link";
 import { Suspense } from "react";
 import { YearFilter } from "./YearFilter";
+import { PayoutForm } from "./PayoutForm";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 const pct = (n: number) => `${Number(n || 0).toFixed(1)}%`;
@@ -9,6 +10,11 @@ const pct = (n: number) => `${Number(n || 0).toFixed(1)}%`;
 function fmtDate(v?: string | null) {
   if (!v) return "—";
   return new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function fmtMonth(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 }
 
 function statusLabel(s: string) {
@@ -20,36 +26,23 @@ function statusLabel(s: string) {
 }
 
 export default async function InvestPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
-  const { supabase } = await requireInvestor();
+  const { supabase, profile } = await requireInvestor();
   const { year = String(new Date().getFullYear()) } = await searchParams;
   const allTime = year === "all";
+  const isAdmin = profile.role === "admin";
 
-  // ARRI cameras — direct search (reliable, no RLS issues)
-  const { data: arriCams } = await supabase
-    .from("cameras")
-    .select("id,camera_code,name")
-    .or("manufacturer.ilike.%arri%,name.ilike.%arri%");
+  // Investor data via SECURITY DEFINER RPC (bypasses RLS chain)
+  const { data: investorRows } = await supabase.rpc("get_arri_investor_data");
 
-  const camIds = (arriCams || []).map((c: any) => c.id);
-
-  // Investor groups linked to those cameras
-  const { data: groups } = camIds.length > 0
-    ? await supabase
-        .from("investor_groups")
-        .select("id,name,camera_id")
-        .in("camera_id", camIds)
-    : { data: [] };
-
-  const groupIds = (groups || []).map((g: any) => g.id);
-
-  // Investors across all groups
-  const { data: investorRows } = groupIds.length > 0
-    ? await supabase
-        .from("investors")
-        .select("id,investor_code,name,location,ownership_percent,invested_amount_usd,invested_amount_inr,notes,investor_group_id")
-        .in("investor_group_id", groupIds)
-        .order("ownership_percent", { ascending: false })
-    : { data: [] };
+  // Deduplicate cameras from investor data
+  const camMap = new Map<string, { id: string; camera_code: string; name: string }>();
+  for (const r of (investorRows || [])) {
+    if (!camMap.has(r.camera_id)) {
+      camMap.set(r.camera_id, { id: r.camera_id, camera_code: r.camera_code, name: r.camera_name });
+    }
+  }
+  const arriCams = Array.from(camMap.values());
+  const camIds = arriCams.map((c) => c.id);
 
   const totalCameraInr = (investorRows || []).reduce((n: number, r: any) => n + Number(r.invested_amount_inr || 0), 0);
 
@@ -90,17 +83,51 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
     ["checked_out", "overdue", "reserved", "confirmed", "preparing"].includes(b.status)
   ).length;
 
-  // Per-investor breakdown
-  const breakdown = (investorRows || []).map((inv: any) => {
-    const share = Number(inv.ownership_percent || 0);
+  // Payouts — filtered by year unless "all"
+  const { data: allPayouts } = await supabase.rpc("get_arri_investor_payouts");
+  const payouts = (allPayouts || []).filter((p: any) =>
+    allTime || new Date(p.paid_at).getFullYear() === Number(year)
+  );
+  const totalPaidOut = payouts.reduce((n: number, p: any) => n + Number(p.amount_inr || 0), 0);
+
+  // Monthly payout summary
+  const monthMap = new Map<string, number>();
+  for (const p of payouts) {
+    const key = p.paid_at.slice(0, 7); // "YYYY-MM"
+    monthMap.set(key, (monthMap.get(key) || 0) + Number(p.amount_inr || 0));
+  }
+  const monthSummary = Array.from(monthMap.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, total]) => ({ key, label: fmtMonth(key + "-01"), total }));
+
+  // Per-investor breakdown (RPC returns investor_name, investor_id, etc.)
+  const breakdown = (investorRows || []).map((row: any) => {
+    const inv = {
+      id: row.investor_id,
+      investor_code: row.investor_code,
+      name: row.investor_name,
+      location: row.location,
+      ownership_percent: row.ownership_percent,
+      invested_amount_inr: row.invested_amount_inr,
+    };
+    const share = Number(row.ownership_percent || 0);
     const revenueBilled = totalBilled * share / 100;
     const revenueReceived = totalReceived * share / 100;
-    const investedInr = Number(inv.invested_amount_inr || 0);
+    const investedInr = Number(row.invested_amount_inr || 0);
     const roiPct = investedInr > 0 ? (revenueReceived / investedInr) * 100 : 0;
-    return { inv, share, revenueBilled, revenueReceived, investedInr, roiPct };
+    const paidOut = payouts
+      .filter((p: any) => p.investor_id === row.investor_id)
+      .reduce((n: number, p: any) => n + Number(p.amount_inr || 0), 0);
+    return { inv, share, revenueBilled, revenueReceived, investedInr, roiPct, paidOut };
   });
 
   const periodLabel = allTime ? "All time" : `Jan–Dec ${year}`;
+
+  // Build investor options for payout form
+  const investorOptions = (investorRows || []).map((r: any) => ({
+    id: r.investor_id,
+    name: r.investor_name,
+  }));
 
   return (
     <div className="investPage">
@@ -153,6 +180,13 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
           <b>{money(totalCameraInr)}</b>
           <small>total investment</small>
         </div>
+        {totalPaidOut > 0 && (
+          <div className="investMetric warn">
+            <span>Paid to investors</span>
+            <b>{money(totalPaidOut)}</b>
+            <small>{periodLabel}</small>
+          </div>
+        )}
       </div>
 
       {/* Investor breakdown */}
@@ -160,16 +194,17 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
         <section className="investCard">
           <h2 className="investCardTitle">Investor Revenue Share · {periodLabel}</h2>
           <div className="investBreakdownTable">
-            <div className="investBreakdownHead">
+            <div className="investBreakdownHead investBreakdownHead7">
               <span>Investor</span>
               <span>Share %</span>
               <span>Invested</span>
               <span>Revenue (billed)</span>
               <span>Revenue (received)</span>
+              <span>Paid out</span>
               <span>ROI recovered</span>
             </div>
-            {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct }) => (
-              <div key={inv.id} className="investBreakdownRow">
+            {breakdown.map(({ inv, share, revenueBilled, revenueReceived, investedInr, roiPct, paidOut }) => (
+              <div key={inv.id} className="investBreakdownRow investBreakdownRow7">
                 <div>
                   <b>{inv.name}</b>
                   {inv.location && <small>{inv.location}</small>}
@@ -178,12 +213,50 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
                 <span>{money(investedInr)}</span>
                 <span>{money(revenueBilled)}</span>
                 <span className="investReceived">{money(revenueReceived)}</span>
+                <span className="investPaidOut">{paidOut > 0 ? money(paidOut) : "—"}</span>
                 <span className={`investRoi${roiPct >= 100 ? " full" : ""}`}>{pct(roiPct)}</span>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      {/* Payout history */}
+      <section className="investCard">
+        <div className="investCardTitleRow">
+          <h2 className="investCardTitle">Payouts to Investors · {periodLabel}</h2>
+          {totalPaidOut > 0 && <span className="investCardTotal">{money(totalPaidOut)}</span>}
+        </div>
+        {payouts.length === 0 && (
+          <p className="investEmpty">No payouts recorded{allTime ? "" : " in this period"}.</p>
+        )}
+        {monthSummary.map(({ key, label, total }) => {
+          const monthPayouts = payouts.filter((p: any) => p.paid_at.startsWith(key));
+          return (
+            <div key={key} className="investPayoutMonth">
+              <div className="investPayoutMonthHead">
+                <span>{label}</span>
+                <b>{money(total)}</b>
+              </div>
+              {monthPayouts.map((p: any) => (
+                <div key={p.payout_id} className="investPayoutRow">
+                  <span className="investPayoutName">{p.investor_name}</span>
+                  <span className="investPayoutDate">{fmtDate(p.paid_at)}</span>
+                  <span className="investPayoutMode">{p.payment_mode || "—"}</span>
+                  {p.notes && <span className="investPayoutNotes">{p.notes}</span>}
+                  <strong className="investPayoutAmt">{money(p.amount_inr)}</strong>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        {isAdmin && (
+          <div className="investPayoutFormWrap">
+            <h3 className="investPayoutFormTitle">Record a payout</h3>
+            <PayoutForm investors={investorOptions} />
+          </div>
+        )}
+      </section>
 
       {/* Bookings */}
       <section className="investCard">

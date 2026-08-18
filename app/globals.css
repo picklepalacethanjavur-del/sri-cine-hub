@@ -576,18 +576,44 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investYearChip{padding:5px 14px;border-radius:999px;border:1px solid var(--line);background:#111;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
 .investYearChip:hover{border-color:#6b6558;color:var(--text)}
 .investYearChip.active{background:#2a2210;border-color:var(--gold);color:var(--gold2)}
-.investBreakdownTable{display:grid;gap:0}
-.investBreakdownHead{display:grid;grid-template-columns:1fr 70px 120px 180px 180px 110px;gap:10px;padding:8px 10px;font-size:10px;font-weight:900;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--line)}
-.investBreakdownRow{display:grid;grid-template-columns:1fr 70px 120px 180px 180px 110px;gap:10px;padding:12px 10px;border-bottom:1px solid var(--line);align-items:center}
+.investBreakdownTable{display:grid;gap:0;overflow-x:auto}
+.investBreakdownHead{display:grid;grid-template-columns:1fr 70px 120px 160px 160px 110px;gap:10px;padding:8px 10px;font-size:10px;font-weight:900;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--line);min-width:700px}
+.investBreakdownRow{display:grid;grid-template-columns:1fr 70px 120px 160px 160px 110px;gap:10px;padding:12px 10px;border-bottom:1px solid var(--line);align-items:center;min-width:700px}
+.investBreakdownHead7{grid-template-columns:1fr 70px 110px 140px 140px 100px 110px}
+.investBreakdownRow7{grid-template-columns:1fr 70px 110px 140px 140px 100px 110px}
 .investBreakdownRow:last-child{border-bottom:none}
 .investBreakdownRow b{font-size:13px}
 .investBreakdownRow small{display:block;font-size:11px;color:var(--muted)}
 .investSharePct{font-size:13px;font-weight:800;color:var(--gold2)}
 .investReceived{font-size:13px;font-weight:700;color:#b8f2cb}
+.investPaidOut{font-size:13px;font-weight:700;color:#ffbb66}
 .investRoi{font-size:13px;font-weight:700;color:var(--muted)}
 .investRoi.full{color:#6fcf6f}
 .investBalanceDue{font-size:11px;color:#ffbb66;background:#3a2810;border:1px solid #7a5620;border-radius:999px;padding:3px 8px}
-@media(max-width:600px){.investHeader{padding:14px 16px}.investMain{padding:20px 16px 60px}}
+.investCardTitleRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.investCardTitleRow .investCardTitle{margin-bottom:0}
+.investCardTotal{font-size:15px;font-weight:800;color:var(--gold2)}
+.investPayoutMonth{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.investPayoutMonth:first-of-type{border-top:none;margin-top:0;padding-top:0}
+.investPayoutMonthHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.investPayoutMonthHead span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:900}
+.investPayoutMonthHead b{font-size:14px;font-weight:800;color:var(--gold2)}
+.investPayoutRow{display:grid;grid-template-columns:1fr auto auto minmax(0,2fr) auto;gap:8px;align-items:center;padding:9px 12px;border-radius:8px;background:#161410;margin-bottom:6px;font-size:13px}
+.investPayoutName{font-weight:700}
+.investPayoutDate{color:var(--muted);font-size:12px}
+.investPayoutMode{font-size:11px;color:#a09880;border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.investPayoutNotes{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.investPayoutAmt{color:#ffbb66;font-weight:900;text-align:right;white-space:nowrap}
+.investPayoutFormWrap{border-top:1px solid var(--line);margin-top:20px;padding-top:18px}
+.investPayoutFormTitle{font-size:13px;font-weight:900;color:var(--gold2);margin:0 0 14px}
+.investPayoutForm{display:grid;gap:10px}
+.investPayoutFormRow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.investPayoutFormRow label{display:grid;gap:5px;font-size:11px;font-weight:700;color:var(--muted);flex:1;min-width:120px}
+.investPayoutFormRow label[style*="flex:1"]{flex:2}
+.investPayoutFormRow input,.investPayoutFormRow select{background:#0c0c0c;color:#fff;border:1px solid #393632;border-radius:8px;padding:10px;font-size:14px;width:100%}
+.investPayoutSubmit{padding:10px 18px;background:var(--gold);color:#15110a;border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;align-self:flex-end}
+.investPayoutSubmit:disabled{opacity:.6;cursor:not-allowed}
+@media(max-width:600px){.investHeader{padding:14px 16px}.investMain{padding:20px 16px 60px}.investBreakdownHead7,.investBreakdownRow7{grid-template-columns:1fr 60px 90px 110px 110px 80px 90px}.investPayoutRow{grid-template-columns:1fr auto auto}}
 
 /* =========================================================
    Supplier Reverse Lookup + Edit Forms
