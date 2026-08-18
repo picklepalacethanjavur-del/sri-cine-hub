@@ -479,6 +479,9 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .quoteOwnItem{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;background:#0d0d0d;color:#fff;border:1px solid #2a2926;border-radius:9px;padding:10px 12px;cursor:pointer;transition:.12s;margin-bottom:5px}
 .quoteOwnItem:hover:not(:disabled){border-color:#6a5729;background:#16130d}
 .quoteOwnItem.booked,.quoteOwnItem:disabled{opacity:.45;cursor:not-allowed}
+.quoteOwnItem.added{border-color:#2c7048;background:#0d1f16;color:#a8efbe}
+.quoteSupplierItem.added{border-color:#2c7048;background:#0d1f16}
+.quoteAddedText{font-size:11px;font-weight:900;color:#a8efbe;white-space:nowrap;flex-shrink:0}
 .quoteOwnItemInfo{display:grid;gap:2px;min-width:0}
 .quoteOwnItemInfo b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .quoteOwnItemInfo span{font-size:10px;color:var(--muted)}

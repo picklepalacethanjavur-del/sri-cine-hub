@@ -12,6 +12,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
     { data: accessories },
     { data: supplierItems },
     { data: existingQuotes },
+    { data: internalRates },
   ] = await Promise.all([
     supabase.from("quote_requests").select("*").eq("id", id).single(),
     supabase.from("cameras").select("id,camera_code,name,status").neq("status", "retired").order("camera_code"),
@@ -21,6 +22,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
       .eq("is_active", true)
       .order("category"),
     supabase.from("quotations").select("id,quotation_code,status,total_inr").eq("quote_request_id", id).order("created_at", { ascending: false }),
+    supabase.from("internal_rates").select("camera_id,accessory_id,daily_rate_inr").order("effective_from", { ascending: false }),
   ]);
 
   if (!req) notFound();
@@ -61,6 +63,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
       bookedCameraIds={bookedCameraIds}
       bookedAccessoryIds={bookedAccessoryIds}
       rentalDays={rentalDays}
+      internalRates={internalRates || []}
       userId={user.id}
     />
   );

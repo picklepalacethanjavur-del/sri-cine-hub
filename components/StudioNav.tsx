@@ -12,9 +12,9 @@ const MAIN = [
 ];
 
 const TOOLS = [
-  { href: "/admin/inventory", label: "Inventory" },
-  { href: "/admin/suppliers", label: "Suppliers" },
-  { href: "/admin",           label: "Admin panel" },
+  { href: "/studio/inventory", label: "Inventory" },
+  { href: "/studio/suppliers", label: "Suppliers" },
+  { href: "/admin",            label: "Admin panel" },
 ];
 
 export function StudioNav({ name }: { name: string }) {

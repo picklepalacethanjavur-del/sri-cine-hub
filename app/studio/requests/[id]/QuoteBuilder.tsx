@@ -1,12 +1,13 @@
 "use client";
 import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 function fmtDate(v?: string | null) {
   if (!v) return "—";
-  return new Date(v).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 type Line = {
@@ -26,17 +27,37 @@ type Line = {
 
 function newKey() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; }
 
-export function QuoteBuilder({ request, cameras, accessories, supplierItems, existingQuotes, bookedCameraIds, bookedAccessoryIds, rentalDays }: any) {
+export function QuoteBuilder({ request, cameras, accessories, supplierItems, existingQuotes, bookedCameraIds, bookedAccessoryIds, rentalDays, internalRates }: any) {
   const supabase = createClient();
+  const router = useRouter();
   const [lines, setLines] = useState<Line[]>([]);
   const [tab, setTab] = useState<"own" | "supplier" | "manual">("own");
+  const [ownSearch, setOwnSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
   const [saving, setSaving] = useState<"draft" | "generate" | null>(null);
   const [msg, setMsg] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   const subtotal = lines.reduce((n, l) => n + (l.quantity * l.rental_days * l.quoted_rate_inr), 0);
   const total = Math.max(0, subtotal - discount);
+
+  function flashAdded(id: string) {
+    setAddedIds(prev => new Set([...prev, id]));
+    setTimeout(() => setAddedIds(prev => { const n = new Set(prev); n.delete(id); return n; }), 1200);
+  }
+
+  function rateFor(camId: string | null, accId: string | null): number {
+    if (camId) {
+      const r = (internalRates || []).find((x: any) => x.camera_id === camId);
+      return Number(r?.daily_rate_inr || 0);
+    }
+    if (accId) {
+      const r = (internalRates || []).find((x: any) => x.accessory_id === accId);
+      return Number(r?.daily_rate_inr || 0);
+    }
+    return 0;
+  }
 
   function addCamera(cam: any) {
     setLines(prev => [...prev, {
@@ -45,7 +66,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       section_name: "Cameras",
       quantity: 1,
       rental_days: rentalDays,
-      quoted_rate_inr: 0,
+      quoted_rate_inr: rateFor(cam.id, null),
       source_type: "own_camera",
       item_id: cam.id,
       supplier_id: "",
@@ -53,6 +74,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       internal_cost_inr: 0,
       notes: "",
     }]);
+    flashAdded(cam.id);
   }
 
   function addAccessory(acc: any) {
@@ -62,7 +84,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       section_name: acc.category || "Accessories",
       quantity: 1,
       rental_days: rentalDays,
-      quoted_rate_inr: 0,
+      quoted_rate_inr: rateFor(null, acc.id),
       source_type: "own_accessory",
       item_id: acc.id,
       supplier_id: "",
@@ -70,23 +92,26 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       internal_cost_inr: 0,
       notes: "",
     }]);
+    flashAdded(acc.id);
   }
 
   function addSupplierItem(item: any) {
+    const cost = Number(item.default_cost_inr || 0);
     setLines(prev => [...prev, {
       key: newKey(),
       description: item.supplier_item_name,
       section_name: item.category || "Supplier",
       quantity: 1,
       rental_days: rentalDays,
-      quoted_rate_inr: 0,
+      quoted_rate_inr: cost,
       source_type: "supplier",
       item_id: "",
       supplier_id: item.supplier_id,
       supplier_catalog_item_id: item.id,
-      internal_cost_inr: Number(item.default_cost_inr || 0),
+      internal_cost_inr: cost,
       notes: `Supplier: ${item.suppliers?.company_name || ""}`,
     }]);
+    flashAdded(item.id);
   }
 
   function addManualLine() {
@@ -147,15 +172,28 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         p_items: items,
       });
       if (error) throw error;
-      const result = data as { quotation_id: string };
-      location.href = status === "generated"
-        ? `/admin/quotations/${result.quotation_id}/print?generated=1`
-        : `/admin/quotations/${result.quotation_id}`;
+      const result = Array.isArray(data) ? data[0] : data;
+      const qid = result?.quotation_id;
+      if (!qid) throw new Error("No quotation ID returned. Please try again.");
+      setSaving(null);
+      router.push(status === "generated"
+        ? `/admin/quotations/${qid}/print?generated=1`
+        : `/admin/quotations/${qid}`);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to save quotation.");
       setSaving(null);
     }
   }
+
+  const filteredCameras = useMemo(() =>
+    cameras.filter((c: any) => `${c.camera_code} ${c.name}`.toLowerCase().includes(ownSearch.toLowerCase())),
+    [cameras, ownSearch]
+  );
+
+  const filteredAccessories = useMemo(() =>
+    accessories.filter((a: any) => `${a.accessory_code} ${a.name} ${a.category}`.toLowerCase().includes(ownSearch.toLowerCase())),
+    [accessories, ownSearch]
+  );
 
   const filteredSupplier = useMemo(() =>
     supplierItems.filter((x: any) =>
@@ -166,6 +204,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
 
   return (
     <div className="studioPage studioPageWide">
+      {/* Client info bar */}
       <div className="quoteClientBar">
         <div>
           <p className="studioEyebrow">{request.request_code}</p>
@@ -188,7 +227,10 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         )}
       </div>
 
+      {/* Two-panel builder */}
       <div className="quoteBuilderStudio">
+
+        {/* LEFT: Add items */}
         <div className="quoteAddPanel">
           <div className="quoteAddTabs">
             <button className={tab === "own" ? "active" : ""} onClick={() => setTab("own")}>Our Gear</button>
@@ -198,13 +240,21 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
 
           {tab === "own" && (
             <div className="quoteOwnPanel">
+              <input
+                className="quoteSupplierSearch"
+                placeholder="Search cameras & accessories…"
+                value={ownSearch}
+                onChange={e => setOwnSearch(e.target.value)}
+              />
               <p className="quoteOwnLabel">CAMERAS</p>
-              {cameras.map((cam: any) => {
+              {filteredCameras.length === 0 && <p className="studioEmpty">No cameras match.</p>}
+              {filteredCameras.map((cam: any) => {
                 const booked = bookedCameraIds.includes(cam.id);
+                const added = addedIds.has(cam.id);
                 return (
                   <button
                     key={cam.id}
-                    className={`quoteOwnItem${booked ? " booked" : ""}`}
+                    className={`quoteOwnItem${booked ? " booked" : ""}${added ? " added" : ""}`}
                     onClick={() => !booked && addCamera(cam)}
                     disabled={booked}
                   >
@@ -212,17 +262,23 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
                       <b>{cam.camera_code}</b>
                       <span>{cam.name}</span>
                     </div>
-                    <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                    {added
+                      ? <span className="quoteAddedText">✓ Added</span>
+                      : <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                    }
                   </button>
                 );
               })}
+
               <p className="quoteOwnLabel" style={{ marginTop: "16px" }}>ACCESSORIES</p>
-              {accessories.map((acc: any) => {
+              {filteredAccessories.length === 0 && <p className="studioEmpty">No accessories match.</p>}
+              {filteredAccessories.map((acc: any) => {
                 const booked = bookedAccessoryIds.includes(acc.id);
+                const added = addedIds.has(acc.id);
                 return (
                   <button
                     key={acc.id}
-                    className={`quoteOwnItem${booked ? " booked" : ""}`}
+                    className={`quoteOwnItem${booked ? " booked" : ""}${added ? " added" : ""}`}
                     onClick={() => !booked && addAccessory(acc)}
                     disabled={booked}
                   >
@@ -230,7 +286,10 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
                       <b>{acc.accessory_code}</b>
                       <span>{acc.name} · {acc.category}</span>
                     </div>
-                    <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                    {added
+                      ? <span className="quoteAddedText">✓ Added</span>
+                      : <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                    }
                   </button>
                 );
               })}
@@ -246,15 +305,21 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
                 onChange={e => setSupplierSearch(e.target.value)}
               />
               {filteredSupplier.length === 0 && <p className="studioEmpty">No items found.</p>}
-              {filteredSupplier.map((item: any) => (
-                <button key={item.id} className="quoteSupplierItem" onClick={() => addSupplierItem(item)}>
-                  <div className="quoteSupplierItemInfo">
-                    <b>{item.supplier_item_name}</b>
-                    <span>{item.category} · {item.suppliers?.company_name}</span>
-                  </div>
-                  <span className="quoteSupplierCost">{money(item.default_cost_inr)}/{item.rate_basis}</span>
-                </button>
-              ))}
+              {filteredSupplier.map((item: any) => {
+                const added = addedIds.has(item.id);
+                return (
+                  <button key={item.id} className={`quoteSupplierItem${added ? " added" : ""}`} onClick={() => addSupplierItem(item)}>
+                    <div className="quoteSupplierItemInfo">
+                      <b>{item.supplier_item_name}</b>
+                      <span>{item.category} · {item.suppliers?.company_name}</span>
+                    </div>
+                    {added
+                      ? <span className="quoteAddedText">✓</span>
+                      : <span className="quoteSupplierCost">{money(item.default_cost_inr)}/{item.rate_basis}</span>
+                    }
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -266,6 +331,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
           )}
         </div>
 
+        {/* RIGHT: Current package */}
         <div className="quotePackagePanel">
           <div className="quotePackageHead">
             <span>PACKAGE · {lines.length} item{lines.length !== 1 ? "s" : ""}</span>
@@ -325,7 +391,6 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       {saving && (
         <div className="actionOverlay">
           <div className="actionOverlayCard">
-            <span className="loadingSpinner" />
             <b>{saving === "generate" ? "Generating quotation…" : "Saving draft…"}</b>
           </div>
         </div>
