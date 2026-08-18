@@ -517,3 +517,46 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .quotePackageActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:960px){.quoteBuilderStudio{grid-template-columns:1fr}.quoteAddPanel{position:relative;max-height:500px}}
 @media(max-width:520px){.quoteLineNumbers{grid-template-columns:1fr 1fr}.quoteLineTotal{grid-column:1/-1;text-align:left}}
+
+/* =========================================================
+   Investor Portal V8
+   ========================================================= */
+.investShell{min-height:100vh;background:var(--bg)}
+.investHeader{display:flex;align-items:center;gap:16px;padding:16px 32px;background:#0a0a0a;border-bottom:1px solid var(--line)}
+.investBrand{font-weight:900;font-size:13px;letter-spacing:.12em;color:var(--text)}
+.investRole{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;background:#1a1600;border:1px solid #4a3d10;border-radius:999px}
+.investUser{margin-left:auto;font-size:12px;color:var(--muted)}
+.investMain{max-width:960px;margin:0 auto;padding:36px 28px 60px}
+.investPage{display:grid;gap:20px}
+.investPageHeader{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}
+.investEyebrow{font-size:10px;font-weight:900;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;margin:0 0 6px}
+.investH1{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.035em;margin:0;line-height:1}
+.investCamList{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.investCamChip{font-size:11px;font-weight:800;padding:5px 12px;border:1px solid #4a3d10;border-radius:999px;background:#1a1600;color:var(--gold2)}
+.investMetrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.investMetric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:4px}
+.investMetric span{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.investMetric b{font-size:26px;font-weight:900;letter-spacing:-.03em}
+.investMetric small{font-size:10px;color:var(--muted)}
+.investMetric.gold{border-color:#4a3d10;background:#0e0d00}
+.investMetric.gold b{color:var(--gold2)}
+.investMetric.warn{border-color:#5c3010;background:#100800}
+.investMetric.warn b{color:#ffbb66}
+.investCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.investCardTitle{font-size:16px;font-weight:900;margin:0 0 16px}
+.investRow{display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+.investRow:first-of-type{border-top:none}
+.investRowInfo{flex:1;display:grid;gap:4px;min-width:0}
+.investRowInfo b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.investRowInfo span{font-size:12px;color:var(--muted)}
+.investRowRight{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.investRowRight strong{font-size:14px;color:var(--gold2);font-weight:900}
+.investBadge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.04em;border:1px solid #444;background:#222;color:#f0f0f0;white-space:nowrap}
+.investBadge.checked_out,.investBadge.preparing{background:#3a2810;border-color:#7a5620;color:#ffcc88}
+.investBadge.overdue{background:#3f1b1b;border-color:#7a2e2e;color:#ff9494}
+.investBadge.returned{background:#143523;border-color:#2c7048;color:#b8f2cb}
+.investBadge.reserved,.investBadge.confirmed{background:#1a2535;border-color:#365270;color:#a8d0ff}
+.investBadge.cancelled{background:#2a1f1f;border-color:#5a3535;color:#ffc0c0}
+.investEmpty{color:var(--muted);font-size:13px;padding:8px 0}
+.investBalanceDue{font-size:11px;color:#ffbb66;background:#3a2810;border:1px solid #7a5620;border-radius:999px;padding:3px 8px}
+@media(max-width:600px){.investHeader{padding:14px 16px}.investMain{padding:20px 16px 60px}}
