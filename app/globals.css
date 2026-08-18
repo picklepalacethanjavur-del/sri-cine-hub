@@ -533,7 +533,9 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investHeader{display:flex;align-items:center;gap:16px;padding:16px 32px;background:#0a0a0a;border-bottom:1px solid var(--line)}
 .investBrand{font-weight:900;font-size:13px;letter-spacing:.12em;color:var(--text)}
 .investRole{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;background:#1a1600;border:1px solid #4a3d10;border-radius:999px}
-.investUser{margin-left:auto;font-size:12px;color:var(--muted)}
+.investHeaderRight{margin-left:auto;display:flex;align-items:center;gap:14px}
+.investUser{font-size:12px;color:var(--muted)}
+.investBackLink{font-size:12px;color:var(--gold);font-weight:700;text-decoration:none;padding:5px 12px;border:1px solid #4a3d10;border-radius:999px;background:#1a1600;transition:.15s}.investBackLink:hover{border-color:var(--gold);color:var(--gold2)}
 .investMain{max-width:960px;margin:0 auto;padding:36px 28px 60px}
 .investPage{display:grid;gap:20px}
 .investPageHeader{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}

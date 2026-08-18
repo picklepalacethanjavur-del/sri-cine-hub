@@ -208,7 +208,7 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
         <section className="investCard">
           <h2 className="investCardTitle">Revenue · Receipts</h2>
           {(receipts || []).map((r: any) => (
-            <Link key={r.id} href={`/admin/receipts/${r.id}/print`} className="investRow investRowLink">
+            <Link key={r.id} href={`/invest/receipts/${r.id}`} className="investRow investRowLink">
               <div className="investRowInfo">
                 <b>{r.receipt_code} · {r.customers?.company_name || r.customers?.name}</b>
                 <span>{r.bookings?.booking_code} · {r.bookings?.project_name} · {fmtDate(r.issued_at)}</span>
