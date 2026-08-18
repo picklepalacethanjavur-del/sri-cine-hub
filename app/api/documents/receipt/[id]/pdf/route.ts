@@ -1,2 +1,21 @@
-import {NextResponse} from "next/server";import {createClient} from "@/lib/supabase/server";import {makeBusinessPdf} from "@/lib/pdfDocument";
-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return new NextResponse("Unauthorized",{status:401});const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",user.id).single();if(!profile?.is_active||!["admin","staff"].includes(profile.role))return new NextResponse("Forbidden",{status:403});const {data:r}=await supabase.from("receipts").select("*,bookings(booking_code,project_name),customers(name,company_name)").eq("id",id).single();if(!r)return new NextResponse("Not found",{status:404});const {data:payments}=await supabase.from("payments").select("id,amount_inr,method,reference,received_at,transaction_type,status,reversed_payment_id").eq("booking_id",r.booking_id).order("received_at");const posted=(payments||[]).filter((p:any)=>p.status==="posted");const reversed=new Set(posted.filter((p:any)=>p.transaction_type==="reversal"&&p.reversed_payment_id).map((p:any)=>p.reversed_payment_id));const effective=posted.filter((p:any)=>["payment","adjustment"].includes(p.transaction_type)&&!reversed.has(p.id));const lines=[{description:"Rental",quantity:1,days:1,rate:Number(r.rental_amount_inr||0),amount:Number(r.rental_amount_inr||0),section:"Charges"},{description:"Damage charges",quantity:1,days:1,rate:Number(r.damage_charges_inr||0),amount:Number(r.damage_charges_inr||0),section:"Charges"},{description:"Late charges",quantity:1,days:1,rate:Number(r.late_charges_inr||0),amount:Number(r.late_charges_inr||0),section:"Charges"},{description:"Other charges",quantity:1,days:1,rate:Number(r.other_charges_inr||0),amount:Number(r.other_charges_inr||0),section:"Charges"}].filter(x=>x.amount>0||x.description==="Rental");const total=Number(r.rental_amount_inr||0)+Number(r.damage_charges_inr||0)+Number(r.late_charges_inr||0)+Number(r.other_charges_inr||0)-Number(r.discount_inr||0);const paymentNote=effective.length?effective.map((p:any)=>`Rs. ${Number(p.amount_inr).toLocaleString("en-IN")} ${p.method||""}${p.reference?` (${p.reference})`:""}`).join("; "):"No payment recorded";const bytes=await makeBusinessPdf({title:"Receipt",number:r.receipt_code,partyLabel:"CUSTOMER",party:r.customers?.company_name||r.customers?.name||"Customer",project:r.bookings?.project_name||undefined,lines,layout:"receipt",subtotal:total,discount:0,tax:0,other:0,total,notes:`Paid: Rs. ${Number(r.amount_paid_inr||0).toLocaleString("en-IN")} | Balance: Rs. ${Number(r.balance_inr||0).toLocaleString("en-IN")} | ${paymentNote}`});return new NextResponse(bytes,{headers:{"Content-Type":"application/pdf","Content-Disposition":`attachment; filename="SriCineHub-${r.receipt_code}.pdf"`}});}
+
+import {NextResponse} from "next/server";
+import {createClient} from "@/lib/supabase/server";
+import {loadPremiumReceiptData} from "@/lib/receiptData";
+import {makePremiumReceiptPdf} from "@/lib/receiptPdf";
+
+export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
+  const {id}=await params;
+  const supabase=await createClient();
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return new NextResponse("Unauthorized",{status:401});
+  const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",user.id).single();
+  if(!profile?.is_active||!["admin","staff"].includes(profile.role))return new NextResponse("Forbidden",{status:403});
+  const data=await loadPremiumReceiptData(supabase,id);
+  if(!data)return new NextResponse("Not found",{status:404});
+  const bytes=await makePremiumReceiptPdf(data);
+  return new NextResponse(bytes,{headers:{
+    "Content-Type":"application/pdf",
+    "Content-Disposition":`attachment; filename="SriCineHub-${data.receiptCode}.pdf"`
+  }});
+}
