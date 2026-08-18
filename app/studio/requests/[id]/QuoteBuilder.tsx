@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -38,6 +38,8 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
   const [msg, setMsg] = useState("");
   const [discount, setDiscount] = useState(0);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const autoSavedIdRef = useRef<string | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"" | "saving" | "saved">("");
 
   const subtotal = lines.reduce((n, l) => n + (l.quantity * l.rental_days * l.quoted_rate_inr), 0);
   const total = Math.max(0, subtotal - discount);
@@ -139,55 +141,130 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
     setLines(prev => prev.filter(l => l.key !== key));
   }
 
+  function dbItemType(st: string) {
+    if (st === "own_camera") return "camera";
+    if (st === "own_accessory") return "accessory";
+    return "other";
+  }
+  function dbSourceType(st: string) {
+    if (st === "own_camera" || st === "own_accessory") return "own";
+    if (st === "supplier") return "supplier";
+    return "manual";
+  }
+
+  function buildItems(ls: Line[]) {
+    return ls.map((l, i) => ({
+      item_type: dbItemType(l.source_type),
+      item_id: l.item_id || "",
+      request_item_id: "",
+      catalog_item_id: "",
+      section_name: l.section_name,
+      requested_description: l.description,
+      description: l.description,
+      source_type: dbSourceType(l.source_type),
+      quantity: l.quantity,
+      rental_days: l.rental_days,
+      quoted_rate_inr: l.quoted_rate_inr,
+      internal_rate_inr: 0,
+      cost_rate_inr: l.internal_cost_inr,
+      cost_rate_basis: "daily",
+      supplier_id: l.supplier_id || "",
+      supplier_catalog_item_id: l.supplier_catalog_item_id || "",
+      supplier_name: "",
+      supplier_status: "",
+      supplier_reference: "",
+      notes: l.notes || "",
+      sort_order: i,
+    }));
+  }
+
+  // Auto-save 2.5s after last change
+  useEffect(() => {
+    if (lines.length === 0) return;
+    const currentLines = lines;
+    const currentDiscount = discount;
+    const timer = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        const items = buildItems(currentLines);
+        if (autoSavedIdRef.current) {
+          await supabase.rpc("save_quotation_atomic", {
+            p_quotation_id: autoSavedIdRef.current,
+            p_status: "draft",
+            p_discount_inr: currentDiscount,
+            p_tax_inr: 0,
+            p_other_charges_inr: 0,
+            p_customer_notes: null,
+            p_internal_notes: null,
+            p_items: items,
+          });
+        } else {
+          const { data, error } = await supabase.rpc("create_quotation_atomic", {
+            p_quote_request_id: request.id,
+            p_status: "draft",
+            p_valid_until: null,
+            p_discount_inr: currentDiscount,
+            p_tax_inr: 0,
+            p_other_charges_inr: 0,
+            p_customer_notes: null,
+            p_internal_notes: null,
+            p_items: items,
+          });
+          if (!error && data) {
+            const result = Array.isArray(data) ? data[0] : data;
+            if (result?.quotation_id) autoSavedIdRef.current = result.quotation_id;
+          }
+        }
+        setAutoSaveStatus("saved");
+      } catch {
+        setAutoSaveStatus("");
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [lines, discount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (autoSaveStatus !== "saved") return;
+    const t = setTimeout(() => setAutoSaveStatus(""), 3000);
+    return () => clearTimeout(t);
+  }, [autoSaveStatus]);
+
   async function save(status: "draft" | "generated") {
     setSaving(status === "generated" ? "generate" : "draft");
     setMsg("");
     try {
-      // Map studio source_type to DB item_type and source_type enums
-      // item_type: 'camera' | 'accessory' | 'kit' | 'other'
-      // source_type: 'own' | 'supplier' | 'manual' | 'service'
-      function dbItemType(st: string) {
-        if (st === "own_camera") return "camera";
-        if (st === "own_accessory") return "accessory";
-        return "other";
+      const items = buildItems(lines);
+      let qid: string;
+      if (autoSavedIdRef.current) {
+        const { error } = await supabase.rpc("save_quotation_atomic", {
+          p_quotation_id: autoSavedIdRef.current,
+          p_status: status,
+          p_discount_inr: discount,
+          p_tax_inr: 0,
+          p_other_charges_inr: 0,
+          p_customer_notes: null,
+          p_internal_notes: null,
+          p_items: items,
+        });
+        if (error) throw error;
+        qid = autoSavedIdRef.current;
+      } else {
+        const { data, error } = await supabase.rpc("create_quotation_atomic", {
+          p_quote_request_id: request.id,
+          p_status: status,
+          p_valid_until: null,
+          p_discount_inr: discount,
+          p_tax_inr: 0,
+          p_other_charges_inr: 0,
+          p_customer_notes: null,
+          p_internal_notes: null,
+          p_items: items,
+        });
+        if (error) throw error;
+        const result = Array.isArray(data) ? data[0] : data;
+        qid = result?.quotation_id;
+        if (!qid) throw new Error("No quotation ID returned. Please try again.");
       }
-      function dbSourceType(st: string) {
-        if (st === "own_camera" || st === "own_accessory") return "own";
-        if (st === "supplier") return "supplier";
-        return "manual";
-      }
-      const items = lines.map((l, i) => ({
-        item_id: l.item_id || null,
-        request_item_id: null,
-        catalog_item_id: null,
-        item_type: dbItemType(l.source_type),
-        description: l.description,
-        section_name: l.section_name,
-        quantity: l.quantity,
-        rental_days: l.rental_days,
-        quoted_rate_inr: l.quoted_rate_inr,
-        source_type: dbSourceType(l.source_type),
-        supplier_id: l.supplier_id || null,
-        supplier_catalog_item_id: l.supplier_catalog_item_id || null,
-        internal_cost_inr: l.internal_cost_inr,
-        notes: l.notes || "",
-        sort_order: i,
-      }));
-      const { data, error } = await supabase.rpc("create_quotation_atomic", {
-        p_quote_request_id: request.id,
-        p_status: status,
-        p_valid_until: null,
-        p_discount_inr: discount,
-        p_tax_inr: 0,
-        p_other_charges_inr: 0,
-        p_customer_notes: null,
-        p_internal_notes: null,
-        p_items: items,
-      });
-      if (error) throw error;
-      const result = Array.isArray(data) ? data[0] : data;
-      const qid = result?.quotation_id;
-      if (!qid) throw new Error("No quotation ID returned. Please try again.");
       setSaving(null);
       router.push(status === "generated"
         ? `/admin/quotations/${qid}/print?generated=1`
@@ -232,7 +309,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         {existingQuotes.length > 0 && (
           <div className="quoteExistingList">
             {existingQuotes.map((q: any) => (
-              <Link key={q.id} href={`/admin/quotations/${q.id}/print`} className="quoteExistingChip">
+              <Link key={q.id} href={`/admin/quotations/${q.id}`} className="quoteExistingChip">
                 {q.quotation_code} · {money(q.total_inr)} · <span>{q.status}</span>
               </Link>
             ))}
@@ -348,7 +425,11 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         <div className="quotePackagePanel">
           <div className="quotePackageHead">
             <span>PACKAGE · {lines.length} item{lines.length !== 1 ? "s" : ""}</span>
-            <b>{money(total)}</b>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {autoSaveStatus === "saving" && <span className="quoteAutoSaveStatus">Saving…</span>}
+              {autoSaveStatus === "saved" && <span className="quoteAutoSaveStatus saved">Draft autosaved ✓</span>}
+              <b>{money(total)}</b>
+            </div>
           </div>
 
           <div className="quotePackageLines">

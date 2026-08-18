@@ -495,7 +495,9 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .quoteSupplierItemInfo span{font-size:10px;color:var(--muted)}
 .quoteSupplierCost{font-size:11px;color:var(--gold2);font-weight:800;flex-shrink:0}
 .quotePackagePanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-.quotePackageHead{display:flex;justify-content:space-between;align-items:baseline;padding:14px 18px;border-bottom:1px solid var(--line);background:#0d0d0d}
+.quotePackageHead{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);background:#0d0d0d}
+.quoteAutoSaveStatus{font-size:11px;color:var(--muted)}
+.quoteAutoSaveStatus.saved{color:#6fcf6f}
 .quotePackageHead span{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--gold)}
 .quotePackageHead b{font-size:20px;color:var(--gold2)}
 .quotePackageLines{flex:1;padding:12px;display:grid;gap:8px;min-height:200px}
