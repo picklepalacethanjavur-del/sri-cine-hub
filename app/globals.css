@@ -118,3 +118,14 @@ button:disabled, .button:disabled, .smallButton:disabled {
 .workflowBadge.quote_received{background:#32270f;border-color:#7a642c;color:#ffe09a}.workflowBadge.confirmed{background:#143523;border-color:#2c7048;color:#b8f2cb}.workflowBadge.generated{background:#3c3215;border-color:#8a712c;color:#ffe49b}
 @media(max-width:1050px){.quoteBuilderV6,.supplierRfqBuilder{grid-template-columns:1fr}.quoteCurrentPanel,.rfqCurrentPanel{position:relative;top:auto;max-height:none;min-height:0}.quoteSourcePanel{min-height:500px}.supplierWorkspace{grid-template-columns:1fr}.v6CompactSummary{grid-template-columns:1fr 1fr}.v6QuoteFooterBar{position:relative;bottom:auto;align-items:flex-start;display:grid}.v6FooterActions{justify-content:flex-start;flex-wrap:wrap}.optionalDetailsGrid{grid-template-columns:1fr}}
 @media(max-width:650px){.quoteSourceTabs{grid-template-columns:1fr}.quoteSourceTabs button{border-right:0;border-bottom:1px solid var(--line)}.compactLineMain{grid-template-columns:1fr}.compactLineNumbers{grid-template-columns:45px 45px 70px minmax(70px,1fr) 28px}.compactLineDetails{grid-template-columns:1fr}.compactLineDetails label.wide{grid-column:auto}.manualSourceCards{grid-template-columns:1fr}.v6CompactSummary{grid-template-columns:1fr}.supplierCatalogHeader{display:none}.supplierCatalogRow{grid-template-columns:1fr 50px 90px 60px 28px;padding:9px 7px}.universalDocumentActions{align-items:stretch;display:grid}.documentShareActions,.universalDocumentActions>.documentWorkflowActions{display:grid;grid-template-columns:1fr 1fr}.documentShareActions .button,.universalDocumentActions .documentWorkflowActions .button{width:100%}}
+
+
+/* V6.1 checkout verification */
+.checkoutVerificationList{display:grid;gap:8px;margin:12px 0 18px}
+.checkoutVerificationRow{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#101010}
+.checkoutVerificationRow>div{display:grid;gap:4px}.checkoutVerificationRow span{font-size:12px;color:var(--muted)}
+.checkoutVerificationRow em{font-style:normal;font-size:11px;font-weight:900;letter-spacing:.06em;padding:7px 9px;border-radius:999px}
+.checkoutVerificationRow.pending em{background:#3d2f11;color:#ffe09a}.checkoutVerificationRow.verified{border-color:#28583a;background:#0f1d14}.checkoutVerificationRow.verified em{background:#173424;color:#a8efbe}
+.checkoutOverrideBox{border:1px solid #66501f;background:#1a160c;border-radius:12px;padding:14px;margin:14px 0 20px;display:grid;gap:12px}
+.overrideToggle{display:flex!important;grid-template-columns:none!important;align-items:flex-start;gap:10px!important;cursor:pointer}
+.overrideToggle input{width:auto!important;margin-top:3px}.overrideToggle span{display:grid;gap:4px}.overrideToggle small{color:var(--muted);font-weight:400;line-height:1.4}
