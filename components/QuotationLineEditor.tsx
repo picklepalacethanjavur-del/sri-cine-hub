@@ -103,7 +103,7 @@ export function QuotationLineEditor({
     return (category==="All"||cat===category)&&(!search.trim()||`${x.supplier_item_name} ${x.category} ${supplier} ${x.location||""}`.toLowerCase().includes(search.toLowerCase()));
   });
 
-  function add(row:QuotationRow){onChange([...rows,row]);setExpanded(row.key);}
+  function add(row:QuotationRow){onChange([...rows,row]);}
   function patch(key:string,values:Partial<QuotationRow>){onChange(rows.map(r=>r.key===key?{...r,...values}:r));}
   function remove(key:string){onChange(rows.filter(r=>r.key!==key));if(expanded===key)setExpanded(null);}
 
