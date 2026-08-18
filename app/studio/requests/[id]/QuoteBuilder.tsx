@@ -144,9 +144,9 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
     setMsg("");
     try {
       const items = lines.map((l, i) => ({
-        item_id: l.item_id || "",
-        request_item_id: "",
-        catalog_item_id: "",
+        item_id: l.item_id || null,
+        request_item_id: null,
+        catalog_item_id: null,
         item_type: l.source_type,
         description: l.description,
         section_name: l.section_name,
@@ -154,8 +154,8 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         rental_days: l.rental_days,
         quoted_rate_inr: l.quoted_rate_inr,
         source_type: l.source_type,
-        supplier_id: l.supplier_id || "",
-        supplier_catalog_item_id: l.supplier_catalog_item_id || "",
+        supplier_id: l.supplier_id || null,
+        supplier_catalog_item_id: l.supplier_catalog_item_id || null,
         internal_cost_inr: l.internal_cost_inr,
         notes: l.notes || "",
         sort_order: i,
@@ -179,8 +179,8 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
       router.push(status === "generated"
         ? `/admin/quotations/${qid}/print?generated=1`
         : `/admin/quotations/${qid}`);
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Failed to save quotation.");
+    } catch (err: any) {
+      setMsg(err?.message || err?.details || err?.hint || "Failed to save quotation.");
       setSaving(null);
     }
   }
