@@ -1,11 +1,148 @@
 import Link from "next/link";
-import { EquipmentCard } from "@/components/EquipmentCard";
 import { address, equipment, phones } from "@/lib/data";
-const categories=[...new Set(equipment.map(x=>x.category))];
-export default function Home(){return <>
-<section className="hero"><div className="heroContent"><div className="eyebrow">SRI CINE HUB PVT. LTD. · CHENNAI</div><h1>Camera rental.<br/><span>Lights. Grip. Post.</span></h1><p>One-stop production support for filmmakers—from cinema cameras and lenses to lighting, grip, transport, gensets and post-production studios.</p><div className="actions"><Link className="button gold" href="/request-quote">Check availability</Link><Link className="button ghost" href="/equipment">Browse equipment</Link></div></div><div className="heroMark"><img src="/sri-cine-hub-logo.jpg" alt="Sri Cine Hub"/></div></section>
-<section className="section"><div className="sectionHeading"><div><div className="eyebrow">PRODUCTION INVENTORY</div><h2>Build the package your shoot needs.</h2></div><Link className="textLink" href="/equipment">View full inventory →</Link></div><div className="categoryGrid">{categories.map(cat=><article className="categoryCard" key={cat}><span>{cat}</span><strong>{equipment.filter(x=>x.category===cat).length}</strong><p>Request exact model and date availability.</p></article>)}</div></section>
-<section className="section"><div className="sectionHeading"><div><div className="eyebrow">FEATURED</div><h2>Core production services.</h2></div></div><div className="equipmentGrid">{equipment.filter(x=>x.featured).map(i=><EquipmentCard item={i} key={i.id}/>)}</div></section>
-<section className="section split"><div><div className="eyebrow">RENTAL WORKFLOW</div><h2>Reservations are date-based—not just “available” or “out.”</h2><p className="muted">A camera can be checked out today and still be reserved for a future non-overlapping period. Staff will confirm every quote before the reservation is locked.</p><Link className="button gold" href="/request-quote">Request a quote</Link></div><div className="featureList"><div><b>01</b><span>Request dates & equipment</span></div><div><b>02</b><span>Staff checks conflicts</span></div><div><b>03</b><span>Quote & reservation confirmation</span></div><div><b>04</b><span>Checkout, meter proof & return</span></div></div></section>
-<section className="contactBand"><div><div className="eyebrow">CHENNAI</div><h2>Talk to the rental team.</h2><p>{address}</p></div><div className="phoneList">{phones.map(p=><a key={p} href={`tel:${p.replaceAll(" ","")}`}>{p}</a>)}</div></section>
-</>}
+
+const categories = [...new Set(equipment.map(x => x.category))];
+
+const categoryIcons: Record<string, string> = {
+  Cameras: "◉",
+  Lenses: "◎",
+  Lights: "✦",
+  Grip: "⊞",
+  Transport: "⬡",
+  Genset: "⚡",
+  "Post Production": "▣",
+  Accessories: "◈",
+};
+
+const steps = [
+  { n: "01", title: "Submit a request", body: "Tell us your shoot dates and the equipment you need. Takes under 2 minutes." },
+  { n: "02", title: "Quote confirmation", body: "Our team checks availability, builds your package, and sends a confirmed quote." },
+  { n: "03", title: "Checkout with QR scan", body: "Every item is QR-scanned and photographed on departure. Full condition record." },
+  { n: "04", title: "Return & receipt", body: "Return scan, condition check, and your rental receipt is generated on the spot." },
+];
+
+export default function Home() {
+  return (
+    <>
+      {/* ── Hero ── */}
+      <section className="filmHero">
+        <div className="filmHero__inner">
+          <div className="filmHero__content">
+            <p className="eyebrow">SRI CINE HUB · CHENNAI</p>
+            <h1 className="filmHero__h1">
+              Cameras.<br />
+              Lights.<br />
+              <span className="goldText">Action.</span>
+            </h1>
+            <p className="filmHero__sub">
+              Cinema-grade equipment for features, commercials and series.
+              One studio, every stage of production.
+            </p>
+            <div className="filmHero__actions">
+              <Link href="/equipment" className="btn btnGold">Browse Equipment</Link>
+              <Link href="/request-quote" className="btn btnGhost">Request a Quote</Link>
+            </div>
+          </div>
+          <div className="filmHero__mark">
+            <img src="/sri-cine-hub-logo.jpg" alt="Sri Cine Hub" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Services strip ── */}
+      <div className="servicesStrip">
+        {["Cinema Cameras", "Lenses", "Lighting", "Grip & Rigging", "Transport", "Gensets", "Post Production", "Editing Studio"].map(s => (
+          <span key={s}>{s}</span>
+        ))}
+      </div>
+
+      {/* ── Equipment categories ── */}
+      <section className="siteSection" id="equipment">
+        <div className="siteSectionHead">
+          <div>
+            <p className="eyebrow">PRODUCTION INVENTORY</p>
+            <h2 className="siteH2">Build the package your shoot needs.</h2>
+          </div>
+          <Link href="/equipment" className="linkArrow">Full inventory →</Link>
+        </div>
+        <div className="catGrid">
+          {categories.map(cat => {
+            const count = equipment.filter(x => x.category === cat).length;
+            return (
+              <Link href={`/equipment#${cat.toLowerCase().replace(/\s+/g, "-")}`} className="catCard" key={cat}>
+                <span className="catIcon">{categoryIcons[cat] || "◆"}</span>
+                <strong className="catCount">{count}</strong>
+                <p className="catName">{cat}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Featured cameras ── */}
+      <section className="siteSection">
+        <div className="siteSectionHead">
+          <div>
+            <p className="eyebrow">FEATURED</p>
+            <h2 className="siteH2">Core production services.</h2>
+          </div>
+        </div>
+        <div className="featuredGrid">
+          {equipment.filter(x => x.featured).map(item => (
+            <Link href="/request-quote" className="featuredCard" key={item.id}>
+              <div className="featuredMedia">
+                <span className="featuredCat">{item.category}</span>
+              </div>
+              <div className="featuredBody">
+                <h3 className="featuredName">{item.name}</h3>
+                <p className="featuredDesc">{item.description}</p>
+                <span className="featuredCta">Request this package →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="siteSection howSection">
+        <div className="siteSectionHead">
+          <div>
+            <p className="eyebrow">WORKFLOW</p>
+            <h2 className="siteH2">From request to checkout — same day.</h2>
+          </div>
+        </div>
+        <div className="stepsGrid">
+          {steps.map(s => (
+            <div className="stepCard" key={s.n}>
+              <span className="stepNum">{s.n}</span>
+              <h3 className="stepTitle">{s.title}</h3>
+              <p className="stepBody">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Contact ── */}
+      <section className="contactSection" id="contact">
+        <div className="contactInner">
+          <div className="contactLeft">
+            <p className="eyebrow">GET IN TOUCH</p>
+            <h2 className="siteH2">Talk to the rental team.</h2>
+            <p className="contactAddress">{address}</p>
+            <Link href="/request-quote" className="btn btnGold" style={{ marginTop: "24px", display: "inline-flex" }}>
+              Request a Quote
+            </Link>
+          </div>
+          <div className="contactPhones">
+            {phones.map(p => (
+              <a key={p} href={`tel:${p.replace(/\s/g, "")}`} className="phoneCard">
+                <span className="phoneIcon">✆</span>
+                <span>{p}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
