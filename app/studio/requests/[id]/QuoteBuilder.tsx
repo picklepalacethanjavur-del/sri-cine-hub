@@ -1,0 +1,335 @@
+"use client";
+import { useState, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+
+const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+function fmtDate(v?: string | null) {
+  if (!v) return "—";
+  return new Date(v).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+type Line = {
+  key: string;
+  description: string;
+  section_name: string;
+  quantity: number;
+  rental_days: number;
+  quoted_rate_inr: number;
+  source_type: string;
+  item_id: string;
+  supplier_id: string;
+  supplier_catalog_item_id: string;
+  internal_cost_inr: number;
+  notes: string;
+};
+
+function newKey() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; }
+
+export function QuoteBuilder({ request, cameras, accessories, supplierItems, existingQuotes, bookedCameraIds, bookedAccessoryIds, rentalDays }: any) {
+  const supabase = createClient();
+  const [lines, setLines] = useState<Line[]>([]);
+  const [tab, setTab] = useState<"own" | "supplier" | "manual">("own");
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [saving, setSaving] = useState<"draft" | "generate" | null>(null);
+  const [msg, setMsg] = useState("");
+  const [discount, setDiscount] = useState(0);
+
+  const subtotal = lines.reduce((n, l) => n + (l.quantity * l.rental_days * l.quoted_rate_inr), 0);
+  const total = Math.max(0, subtotal - discount);
+
+  function addCamera(cam: any) {
+    setLines(prev => [...prev, {
+      key: newKey(),
+      description: `${cam.camera_code} · ${cam.name}`,
+      section_name: "Cameras",
+      quantity: 1,
+      rental_days: rentalDays,
+      quoted_rate_inr: 0,
+      source_type: "own_camera",
+      item_id: cam.id,
+      supplier_id: "",
+      supplier_catalog_item_id: "",
+      internal_cost_inr: 0,
+      notes: "",
+    }]);
+  }
+
+  function addAccessory(acc: any) {
+    setLines(prev => [...prev, {
+      key: newKey(),
+      description: `${acc.accessory_code} · ${acc.name}`,
+      section_name: acc.category || "Accessories",
+      quantity: 1,
+      rental_days: rentalDays,
+      quoted_rate_inr: 0,
+      source_type: "own_accessory",
+      item_id: acc.id,
+      supplier_id: "",
+      supplier_catalog_item_id: "",
+      internal_cost_inr: 0,
+      notes: "",
+    }]);
+  }
+
+  function addSupplierItem(item: any) {
+    setLines(prev => [...prev, {
+      key: newKey(),
+      description: item.supplier_item_name,
+      section_name: item.category || "Supplier",
+      quantity: 1,
+      rental_days: rentalDays,
+      quoted_rate_inr: 0,
+      source_type: "supplier",
+      item_id: "",
+      supplier_id: item.supplier_id,
+      supplier_catalog_item_id: item.id,
+      internal_cost_inr: Number(item.default_cost_inr || 0),
+      notes: `Supplier: ${item.suppliers?.company_name || ""}`,
+    }]);
+  }
+
+  function addManualLine() {
+    setLines(prev => [...prev, {
+      key: newKey(),
+      description: "",
+      section_name: "Other",
+      quantity: 1,
+      rental_days: rentalDays,
+      quoted_rate_inr: 0,
+      source_type: "manual",
+      item_id: "",
+      supplier_id: "",
+      supplier_catalog_item_id: "",
+      internal_cost_inr: 0,
+      notes: "",
+    }]);
+  }
+
+  function patch(key: string, v: Partial<Line>) {
+    setLines(prev => prev.map(l => l.key === key ? { ...l, ...v } : l));
+  }
+
+  function removeLine(key: string) {
+    setLines(prev => prev.filter(l => l.key !== key));
+  }
+
+  async function save(status: "draft" | "generated") {
+    setSaving(status === "generated" ? "generate" : "draft");
+    setMsg("");
+    try {
+      const items = lines.map((l, i) => ({
+        item_id: l.item_id || "",
+        request_item_id: "",
+        catalog_item_id: "",
+        item_type: l.source_type,
+        description: l.description,
+        section_name: l.section_name,
+        quantity: l.quantity,
+        rental_days: l.rental_days,
+        quoted_rate_inr: l.quoted_rate_inr,
+        source_type: l.source_type,
+        supplier_id: l.supplier_id || "",
+        supplier_catalog_item_id: l.supplier_catalog_item_id || "",
+        internal_cost_inr: l.internal_cost_inr,
+        notes: l.notes || "",
+        sort_order: i,
+      }));
+      const { data, error } = await supabase.rpc("create_quotation_atomic", {
+        p_quote_request_id: request.id,
+        p_status: status,
+        p_valid_until: null,
+        p_discount_inr: discount,
+        p_tax_inr: 0,
+        p_other_charges_inr: 0,
+        p_customer_notes: null,
+        p_internal_notes: null,
+        p_items: items,
+      });
+      if (error) throw error;
+      const result = data as { quotation_id: string };
+      location.href = status === "generated"
+        ? `/admin/quotations/${result.quotation_id}/print?generated=1`
+        : `/admin/quotations/${result.quotation_id}`;
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to save quotation.");
+      setSaving(null);
+    }
+  }
+
+  const filteredSupplier = useMemo(() =>
+    supplierItems.filter((x: any) =>
+      `${x.supplier_item_name} ${x.category} ${x.suppliers?.company_name}`.toLowerCase().includes(supplierSearch.toLowerCase())
+    ),
+    [supplierItems, supplierSearch]
+  );
+
+  return (
+    <div className="studioPage studioPageWide">
+      <div className="quoteClientBar">
+        <div>
+          <p className="studioEyebrow">{request.request_code}</p>
+          <h1 className="studioH1 studioH1sm">{request.company_name || request.name || "Untitled Request"}</h1>
+        </div>
+        <div className="quoteClientMeta">
+          <span>{request.project_name || "—"}</span>
+          <span>{fmtDate(request.start_at)} → {fmtDate(request.end_at)} · {rentalDays}d</span>
+          {request.phone && <span>{request.phone}</span>}
+          {request.notes && <span className="quoteClientNotes">{request.notes}</span>}
+        </div>
+        {existingQuotes.length > 0 && (
+          <div className="quoteExistingList">
+            {existingQuotes.map((q: any) => (
+              <Link key={q.id} href={`/admin/quotations/${q.id}/print`} className="quoteExistingChip">
+                {q.quotation_code} · {money(q.total_inr)} · <span>{q.status}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="quoteBuilderStudio">
+        <div className="quoteAddPanel">
+          <div className="quoteAddTabs">
+            <button className={tab === "own" ? "active" : ""} onClick={() => setTab("own")}>Our Gear</button>
+            <button className={tab === "supplier" ? "active" : ""} onClick={() => setTab("supplier")}>Supplier</button>
+            <button className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")}>Manual</button>
+          </div>
+
+          {tab === "own" && (
+            <div className="quoteOwnPanel">
+              <p className="quoteOwnLabel">CAMERAS</p>
+              {cameras.map((cam: any) => {
+                const booked = bookedCameraIds.includes(cam.id);
+                return (
+                  <button
+                    key={cam.id}
+                    className={`quoteOwnItem${booked ? " booked" : ""}`}
+                    onClick={() => !booked && addCamera(cam)}
+                    disabled={booked}
+                  >
+                    <div className="quoteOwnItemInfo">
+                      <b>{cam.camera_code}</b>
+                      <span>{cam.name}</span>
+                    </div>
+                    <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                  </button>
+                );
+              })}
+              <p className="quoteOwnLabel" style={{ marginTop: "16px" }}>ACCESSORIES</p>
+              {accessories.map((acc: any) => {
+                const booked = bookedAccessoryIds.includes(acc.id);
+                return (
+                  <button
+                    key={acc.id}
+                    className={`quoteOwnItem${booked ? " booked" : ""}`}
+                    onClick={() => !booked && addAccessory(acc)}
+                    disabled={booked}
+                  >
+                    <div className="quoteOwnItemInfo">
+                      <b>{acc.accessory_code}</b>
+                      <span>{acc.name} · {acc.category}</span>
+                    </div>
+                    <span className={`quoteAvailDot ${booked ? "busy" : "free"}`} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === "supplier" && (
+            <div className="quoteSupplierPanel">
+              <input
+                className="quoteSupplierSearch"
+                placeholder="Search supplier catalog…"
+                value={supplierSearch}
+                onChange={e => setSupplierSearch(e.target.value)}
+              />
+              {filteredSupplier.length === 0 && <p className="studioEmpty">No items found.</p>}
+              {filteredSupplier.map((item: any) => (
+                <button key={item.id} className="quoteSupplierItem" onClick={() => addSupplierItem(item)}>
+                  <div className="quoteSupplierItemInfo">
+                    <b>{item.supplier_item_name}</b>
+                    <span>{item.category} · {item.suppliers?.company_name}</span>
+                  </div>
+                  <span className="quoteSupplierCost">{money(item.default_cost_inr)}/{item.rate_basis}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {tab === "manual" && (
+            <div className="quoteManualPanel">
+              <p className="studioEmpty" style={{ marginBottom: 14 }}>Add a custom line — service charge, transport, delivery, etc.</p>
+              <button className="btn btnGold" onClick={addManualLine}>+ Add Manual Line</button>
+            </div>
+          )}
+        </div>
+
+        <div className="quotePackagePanel">
+          <div className="quotePackageHead">
+            <span>PACKAGE · {lines.length} item{lines.length !== 1 ? "s" : ""}</span>
+            <b>{money(total)}</b>
+          </div>
+
+          <div className="quotePackageLines">
+            {lines.length === 0 && (
+              <p className="studioEmpty">No items yet. Add from Our Gear or Supplier tab.</p>
+            )}
+            {lines.map((line, i) => (
+              <div key={line.key} className={`quoteLine quoteLineSrc-${line.source_type}`}>
+                <div className="quoteLineHeader">
+                  <span className="quoteLineNum">{i + 1}</span>
+                  <div className="quoteLineDesc">
+                    <input
+                      value={line.description}
+                      onChange={e => patch(line.key, { description: e.target.value })}
+                      placeholder="Description"
+                      className="quoteLineDescInput"
+                    />
+                    <span className={`quoteSourceTag ${line.source_type}`}>{line.source_type.replace(/_/g, " ")}</span>
+                  </div>
+                  <button className="quoteLineRemove" onClick={() => removeLine(line.key)}>×</button>
+                </div>
+                <div className="quoteLineNumbers">
+                  <label>Qty<input type="number" min="1" value={line.quantity} onChange={e => patch(line.key, { quantity: Number(e.target.value) })} /></label>
+                  <label>Days<input type="number" min="1" value={line.rental_days} onChange={e => patch(line.key, { rental_days: Number(e.target.value) })} /></label>
+                  <label>Rate ₹<input type="number" min="0" value={line.quoted_rate_inr} onChange={e => patch(line.key, { quoted_rate_inr: Number(e.target.value) })} /></label>
+                  <div className="quoteLineTotal">{money(line.quantity * line.rental_days * line.quoted_rate_inr)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {lines.length > 0 && (
+            <div className="quotePackageTotals">
+              <div className="quoteTotalRow"><span>Subtotal</span><b>{money(subtotal)}</b></div>
+              <div className="quoteTotalRow">
+                <label>Discount ₹<input type="number" min="0" value={discount} onChange={e => setDiscount(Number(e.target.value))} /></label>
+              </div>
+              <div className="quoteTotalRow quoteGrandTotal"><span>Total</span><b>{money(total)}</b></div>
+              {msg && <p className="studioError">{msg}</p>}
+              <div className="quotePackageActions">
+                <button className="btn btnGhost" disabled={!!saving} onClick={() => save("draft")}>
+                  {saving === "draft" ? "Saving…" : "Save Draft"}
+                </button>
+                <button className="btn btnGold" disabled={!!saving} onClick={() => save("generated")}>
+                  {saving === "generate" ? "Generating…" : "Generate Quote"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {saving && (
+        <div className="actionOverlay">
+          <div className="actionOverlayCard">
+            <span className="loadingSpinner" />
+            <b>{saving === "generate" ? "Generating quotation…" : "Saving draft…"}</b>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

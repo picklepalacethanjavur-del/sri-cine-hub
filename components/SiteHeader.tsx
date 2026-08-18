@@ -10,6 +10,7 @@ const NAV = [
 
 export function SiteHeader() {
   const path = usePathname();
+  if (path.startsWith("/studio") || path.startsWith("/admin") || path.startsWith("/invest") || path === "/login") return null;
   return (
     <header className="siteHeader">
       <div className="headerInner">
@@ -19,15 +20,9 @@ export function SiteHeader() {
         </Link>
         <nav className="siteNav">
           {NAV.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={path === href ? "active" : ""}
-            >
-              {label}
-            </Link>
+            <Link key={href} href={href} className={path === href ? "active" : ""}>{label}</Link>
           ))}
-          <Link href="/admin" className="staffLink">Staff</Link>
+          <Link href="/studio" className="staffLink">Staff</Link>
         </nav>
         <Link href="/request-quote" className="headerCta">Request Quote</Link>
       </div>

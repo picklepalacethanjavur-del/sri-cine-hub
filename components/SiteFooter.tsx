@@ -1,7 +1,11 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { address, phones } from "@/lib/data";
 
 export function SiteFooter() {
+  const path = usePathname();
+  if (path.startsWith("/studio") || path.startsWith("/admin") || path.startsWith("/invest") || path === "/login") return null;
   return (
     <footer className="siteFooter">
       <div className="footerInner">
@@ -15,7 +19,6 @@ export function SiteFooter() {
           <Link href="/equipment">Equipment</Link>
           <Link href="/request-quote">Request Quote</Link>
           <Link href="/#contact">Contact</Link>
-          <Link href="/admin">Staff Portal</Link>
         </div>
         <div className="footerContact">
           <p className="footerColLabel">Call us</p>
