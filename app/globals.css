@@ -601,3 +601,48 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .itemEditRowActions{display:flex;justify-content:flex-end;gap:8px}
 @media(max-width:700px){.supplierEditFormGrid,.itemEditRowGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.supplierEditFormGrid,.itemEditRowGrid{grid-template-columns:1fr}}
+
+/* =========================================================
+   SupplierManager v8.4 — sm* classes
+   ========================================================= */
+.smPanelHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.smPanelTitle{margin:0;font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px}
+.smItemCountBadge{font-size:10px;font-weight:800;background:#221d10;color:var(--gold2);border-radius:999px;padding:2px 8px}
+.smAddBtn{font-size:12px;padding:7px 14px;white-space:nowrap}
+.smSearch{width:100%;background:#080808;color:#fff;border:0;border-bottom:1px solid var(--line);padding:10px 16px;font-size:13px;box-sizing:border-box}
+.smSupplierList{overflow-y:auto;max-height:500px;padding:6px}
+.smSupplierRow{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;background:#0c0c0c;color:#fff;border:1px solid transparent;border-radius:9px;padding:11px 12px;margin-bottom:3px;cursor:pointer;transition:border-color .15s}
+.smSupplierRow:hover{border-color:#3a3025}
+.smSupplierRow.active{border-color:#6e5b2b;background:#18140c}
+.smSupplierRow.inactive{opacity:.5}
+.smSupplierRowInfo{display:grid;gap:3px;flex:1;min-width:0}
+.smSupplierRowInfo b{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.smSupplierRowInfo span{font-size:11px;color:var(--muted)}
+.smItemCount{font-size:10px;font-weight:800;background:#1e1a10;color:var(--gold);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.smInlineForm{background:#080808;border:1px solid #3a3530;border-radius:10px;padding:14px 16px;margin:8px 0;display:grid;gap:10px}
+.smInlineForm label{display:grid;gap:4px;font-size:11px;font-weight:700;color:#d8d2c7}
+.smInlineForm input,.smInlineForm textarea,.smInlineForm select{background:#111;color:#fff;border:1px solid #3a3530;border-radius:7px;padding:8px 10px;font-size:13px;width:100%;box-sizing:border-box}
+.smFormGrid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.smFormGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.smFormActions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+.smSupplierCard{background:#0d0c0a;border:1px solid #3a3025;border-radius:12px;padding:16px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:14px 0 10px}
+.smSupplierCardInfo{display:grid;gap:4px;flex:1;min-width:0}
+.smSupplierCode{margin:0;font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.smSupplierName{margin:0;font-size:20px;font-weight:900}
+.smSupplierMeta{margin:0;font-size:12px;color:var(--muted)}
+.smSupplierCardActions{display:flex;gap:6px;flex-shrink:0}
+.smSmBtn{font-size:11px;padding:6px 12px}
+.smEquipSection{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px}
+.smEquipRow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.smEquipRow:first-of-type{border-top:none}
+.smEquipRowInfo{flex:1;display:grid;gap:2px;min-width:0}
+.smEquipRowInfo b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.smEquipRowInfo span{font-size:11px;color:var(--muted)}
+.smEquipQty{font-size:12px;color:var(--muted);white-space:nowrap}
+.smEquipCost{font-size:13px;color:var(--gold2);white-space:nowrap}
+.smEquipCost small{font-size:10px;color:var(--muted);font-weight:400}
+.smEquipActions{display:flex;gap:4px;flex-shrink:0}
+.smEmpty{color:var(--muted);font-size:13px;padding:12px 16px}
+.smEmptyCenter{text-align:center;padding:60px 20px}
+@media(max-width:900px){.smFormGrid2,.smFormGrid3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.smFormGrid2,.smFormGrid3{grid-template-columns:1fr}.smSupplierCard{flex-direction:column;gap:10px}.smSupplierCardActions{flex-direction:row}}
