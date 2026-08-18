@@ -560,3 +560,38 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investEmpty{color:var(--muted);font-size:13px;padding:8px 0}
 .investBalanceDue{font-size:11px;color:#ffbb66;background:#3a2810;border:1px solid #7a5620;border-radius:999px;padding:3px 8px}
 @media(max-width:600px){.investHeader{padding:14px 16px}.investMain{padding:20px 16px 60px}}
+
+/* =========================================================
+   Supplier Reverse Lookup + Edit Forms
+   ========================================================= */
+.supplierModeTabs{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0d0d0d}
+.supplierModeTabs button{flex:1;padding:11px 16px;background:transparent;border:0;border-right:1px solid var(--line);color:var(--muted);font-weight:800;font-size:13px;cursor:pointer}
+.supplierModeTabs button:last-child{border-right:0}
+.supplierModeTabs button.active{background:#221d10;color:var(--gold2)}
+.supplierLookupPanel{padding:4px 0}
+.lookupSearch{width:100%;background:#080808;color:#fff;border:1px solid #34322e;border-radius:8px;padding:11px 14px;font-size:14px;margin-bottom:14px}
+.lookupResults{display:grid;gap:10px}
+.lookupItem{background:#0d0d0d;border:1px solid #2a2926;border-radius:10px;padding:14px 16px}
+.lookupItemName{font-weight:800;font-size:14px;margin-bottom:8px;color:var(--text)}
+.lookupItemName span{font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:999px;background:#342c10;color:var(--gold2);margin-left:8px}
+.lookupSupplierRow{display:flex;align-items:center;gap:14px;padding:8px 0;border-top:1px solid #1e1e1c}
+.lookupSupplierRow:first-of-type{border-top:none}
+.lookupSupplierInfo{flex:1;display:grid;gap:2px}
+.lookupSupplierInfo b{font-size:13px}
+.lookupSupplierInfo span{font-size:11px;color:var(--muted)}
+.lookupSupplierMeta{text-align:right;display:grid;gap:2px}
+.lookupSupplierMeta b{font-size:13px;color:var(--gold2)}
+.lookupSupplierMeta span{font-size:10px;color:var(--muted)}
+.lookupEmpty{color:var(--muted);font-size:13px;padding:16px 0;text-align:center}
+.supplierEditForm{background:#0d0d0d;border:1px solid #34322e;border-radius:10px;padding:16px;margin:8px 0;display:grid;gap:10px}
+.supplierEditFormGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.supplierEditForm label{display:grid;gap:4px;font-size:11px;font-weight:700;color:#d8d2c7}
+.supplierEditForm input,.supplierEditForm textarea,.supplierEditForm select{background:#080808;color:#fff;border:1px solid #34322e;border-radius:7px;padding:8px 10px;font-size:13px;width:100%}
+.supplierEditFormActions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.editBtn{background:transparent;border:1px solid #34322e;border-radius:6px;color:var(--muted);padding:4px 8px;font-size:12px;cursor:pointer}
+.editBtn:hover{border-color:#6a5729;color:var(--gold2)}
+.itemEditRow{background:#0d0d0d;border:1px solid #34322e;border-radius:9px;padding:12px;margin:4px 0;display:grid;gap:8px}
+.itemEditRowGrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px}
+.itemEditRowActions{display:flex;justify-content:flex-end;gap:8px}
+@media(max-width:700px){.supplierEditFormGrid,.itemEditRowGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.supplierEditFormGrid,.itemEditRowGrid{grid-template-columns:1fr}}
