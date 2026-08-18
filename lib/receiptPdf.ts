@@ -62,26 +62,26 @@ export async function makePremiumReceiptPdf(d:PremiumReceiptData){
     ensure(26);page.drawRectangle({x:M,y:y-17,width:W-2*M,height:21,color:charcoal});
     const c=rgb(1,1,1),s=6.7;
     page.drawText("#",{x:M+6,y:y-10,size:s,font:bold,color:c});
-    page.drawText("DESCRIPTION",{x:M+24,y:y-10,size:s,font:bold,color:c});
-    page.drawText("ASSET / SERIAL",{x:285,y:y-10,size:s,font:bold,color:c});
-    page.drawText("QTY",{x:382,y:y-10,size:s,font:bold,color:c});
-    page.drawText("DAYS",{x:414,y:y-10,size:s,font:bold,color:c});
-    page.drawText("RATE",{x:454,y:y-10,size:s,font:bold,color:c});
-    page.drawText("AMOUNT",{x:512,y:y-10,size:s,font:bold,color:c});
+    page.drawText("DESCRIPTION",{x:M+22,y:y-10,size:s,font:bold,color:c});
+    page.drawText("ASSET / SERIAL",{x:275,y:y-10,size:s,font:bold,color:c});
+    page.drawText("QTY",{x:373,y:y-10,size:s,font:bold,color:c});
+    page.drawText("DAYS",{x:405,y:y-10,size:s,font:bold,color:c});
+    page.drawText("RATE",{x:445,y:y-10,size:s,font:bold,color:c});
+    page.drawText("AMOUNT",{x:501,y:y-10,size:s,font:bold,color:c});
     y-=28;
   }
   tableHead();
   let idx=0;
   for(const item of d.lines){
     ensure(34);idx++;
-    const desc=split(regular,item.description,7.5,245);
-    page.drawText(String(idx),{x:M+6,y,size:7.5,font:regular,color:charcoal});
-    desc.forEach((t,i)=>page.drawText(t,{x:M+24,y:y-i*9,size:7.5,font:i===0?bold:regular,color:charcoal}));
-    const asset=split(regular,item.assetRef||"—",7,88);asset.slice(0,2).forEach((t,i)=>page.drawText(t,{x:285,y:y-i*9,size:7,font:regular,color:muted}));
-    page.drawText(String(item.quantity||0),{x:385,y,size:7.5,font:regular});
-    page.drawText(String(item.days||0),{x:417,y,size:7.5,font:regular});
-    page.drawText(money(item.rate),{x:447,y,size:6.6,font:regular});
-    const amt=money(item.amount);page.drawText(amt,{x:W-M-bold.widthOfTextAtSize(amt,6.8),y,size:6.8,font:bold});
+    const desc=split(regular,item.description,7.3,235);
+    page.drawText(String(idx),{x:M+6,y,size:7.3,font:regular,color:charcoal});
+    desc.forEach((t,i)=>page.drawText(t,{x:M+22,y:y-i*9,size:7.3,font:i===0?bold:regular,color:charcoal}));
+    const asset=split(regular,item.assetRef||"—",6.8,88);asset.slice(0,2).forEach((t,i)=>page.drawText(t,{x:275,y:y-i*9,size:6.8,font:regular,color:muted}));
+    page.drawText(String(item.quantity||0),{x:377,y,size:7.2,font:regular});
+    page.drawText(String(item.days||0),{x:409,y,size:7.2,font:regular});
+    const rate=money(item.rate);page.drawText(rate,{x:493-regular.widthOfTextAtSize(rate,6.2),y,size:6.2,font:regular});
+    const amt=money(item.amount);page.drawText(amt,{x:W-M-bold.widthOfTextAtSize(amt,6.4),y,size:6.4,font:bold});
     y-=Math.max(26,desc.length*9+8);
     page.drawLine({start:{x:M,y:y+5},end:{x:W-M,y:y+5},thickness:.35,color:line});
     if(y<105&&idx<d.lines.length){header();sectionTitle("Equipment & Services — Continued");tableHead();}

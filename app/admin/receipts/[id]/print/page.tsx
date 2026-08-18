@@ -82,6 +82,15 @@ export default async function ReceiptDocument({params}:{params:Promise<{id:strin
         <h2>Equipment &amp; Services</h2>
         <div className="premiumReceiptTableWrap">
           <table className="premiumReceiptTable">
+            <colgroup>
+              <col className="receiptColNo"/>
+              <col className="receiptColDescription"/>
+              <col className="receiptColAsset"/>
+              <col className="receiptColQty"/>
+              <col className="receiptColDays"/>
+              <col className="receiptColRate"/>
+              <col className="receiptColAmount"/>
+            </colgroup>
             <thead><tr><th>#</th><th>Description</th><th>Asset / Serial</th><th>Qty</th><th>Days</th><th>Rate</th><th>Amount</th></tr></thead>
             <tbody>{data.lines.map((line,i)=><tr key={`${line.section}-${i}`}>
               <td>{i+1}</td><td><b>{line.description}</b><small>{line.section}</small></td><td>{line.assetRef}</td><td>{line.quantity}</td><td>{line.days}</td><td>{money(line.rate)}</td><td><b>{money(line.amount)}</b></td>

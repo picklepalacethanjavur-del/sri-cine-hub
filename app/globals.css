@@ -165,3 +165,34 @@ button:disabled, .button:disabled, .smallButton:disabled {
 .premiumReceiptFooter{margin-top:28px;padding-top:14px;border-top:1px solid #c9aa55;display:flex;justify-content:space-between;gap:20px;color:#666}.premiumReceiptFooter>div{display:grid;gap:3px}.premiumReceiptFooter b{color:#222}.premiumReceiptFooter small{max-width:420px;text-align:right}
 @media(max-width:800px){.premiumInfoGrid,.premiumFinancialGrid{grid-template-columns:1fr}.premiumReceiptPaper{padding:20px}.premiumReceiptHeader{display:grid}.premiumReceiptIdentity{justify-items:start;text-align:left}.premiumInfoCard dl>div,.premiumChargeCard dl>div,.premiumPaymentCard dl>div{grid-template-columns:120px 1fr}.premiumReceiptFooter{display:grid}.premiumReceiptFooter small{text-align:left}}
 @media print{.premiumReceiptPaper{max-width:none;box-shadow:none;padding:10mm}.premiumReceiptHeader{print-color-adjust:exact;-webkit-print-color-adjust:exact}.premiumReceiptTable th,.premiumPaymentTable th,.receiptStatus{print-color-adjust:exact;-webkit-print-color-adjust:exact}.receiptCorrectionShell{display:none!important}}
+
+
+/* V6.5.1 premium receipt table fit */
+.premiumReceiptTable{table-layout:fixed;width:100%;min-width:0}
+.premiumReceiptTableWrap{overflow-x:visible}
+.premiumReceiptTable .receiptColNo{width:5%}
+.premiumReceiptTable .receiptColDescription{width:31%}
+.premiumReceiptTable .receiptColAsset{width:17%}
+.premiumReceiptTable .receiptColQty{width:7%}
+.premiumReceiptTable .receiptColDays{width:7%}
+.premiumReceiptTable .receiptColRate{width:15%}
+.premiumReceiptTable .receiptColAmount{width:18%}
+.premiumReceiptTable th,.premiumReceiptTable td{box-sizing:border-box;overflow-wrap:anywhere;word-break:normal}
+.premiumReceiptTable th:nth-child(6),.premiumReceiptTable td:nth-child(6),
+.premiumReceiptTable th:nth-child(7),.premiumReceiptTable td:nth-child(7){white-space:nowrap}
+@media print{
+  @page{size:A4 portrait;margin:9mm}
+  .premiumReceiptPaper{width:auto!important;max-width:none!important;padding:0!important;margin:0!important;box-shadow:none!important}
+  .premiumReceiptTableWrap{overflow:visible!important;width:100%!important}
+  .premiumReceiptTable{width:100%!important;min-width:0!important;table-layout:fixed!important}
+  .premiumReceiptTable th{font-size:8px!important;padding:6px 4px!important}
+  .premiumReceiptTable td{font-size:8.5px!important;padding:7px 4px!important}
+  .premiumReceiptTable td small{font-size:7px!important}
+  .premiumReceiptTable .receiptColNo{width:5%!important}
+  .premiumReceiptTable .receiptColDescription{width:31%!important}
+  .premiumReceiptTable .receiptColAsset{width:17%!important}
+  .premiumReceiptTable .receiptColQty{width:7%!important}
+  .premiumReceiptTable .receiptColDays{width:7%!important}
+  .premiumReceiptTable .receiptColRate{width:15%!important}
+  .premiumReceiptTable .receiptColAmount{width:18%!important}
+}
