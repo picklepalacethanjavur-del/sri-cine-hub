@@ -24,17 +24,25 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
   const { year = String(new Date().getFullYear()) } = await searchParams;
   const allTime = year === "all";
 
-  // ARRI cameras via investor_groups → camera_id
-  const { data: groups } = await supabase
-    .from("investor_groups")
-    .select("id,name,camera_id,cameras(id,camera_code,name)")
-    .not("camera_id", "is", null);
+  // ARRI cameras — direct search (reliable, no RLS issues)
+  const { data: arriCams } = await supabase
+    .from("cameras")
+    .select("id,camera_code,name")
+    .or("manufacturer.ilike.%arri%,name.ilike.%arri%");
 
-  const camIds = (groups || []).map((g: any) => g.camera_id).filter(Boolean);
-  const arriCams = (groups || []).map((g: any) => g.cameras).filter(Boolean);
+  const camIds = (arriCams || []).map((c: any) => c.id);
+
+  // Investor groups linked to those cameras
+  const { data: groups } = camIds.length > 0
+    ? await supabase
+        .from("investor_groups")
+        .select("id,name,camera_id")
+        .in("camera_id", camIds)
+    : { data: [] };
+
+  const groupIds = (groups || []).map((g: any) => g.id);
 
   // Investors across all groups
-  const groupIds = (groups || []).map((g: any) => g.id);
   const { data: investorRows } = groupIds.length > 0
     ? await supabase
         .from("investors")
@@ -103,7 +111,7 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
           <p className="investPeriodLabel">{periodLabel}</p>
         </div>
         <div className="investCamList">
-          {arriCams.map((c: any) => (
+          {(arriCams || []).map((c: any) => (
             <span key={c.id} className="investCamChip">{c.camera_code} · {c.name}</span>
           ))}
         </div>
