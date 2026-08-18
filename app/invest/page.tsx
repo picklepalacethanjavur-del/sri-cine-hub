@@ -1,4 +1,5 @@
 import { requireInvestor } from "@/lib/auth";
+import Link from "next/link";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 function fmtDate(v?: string | null) {
@@ -121,7 +122,7 @@ export default async function InvestPage() {
         <section className="investCard">
           <h2 className="investCardTitle">Revenue · Receipts</h2>
           {(receipts || []).map((r: any) => (
-            <div key={r.id} className="investRow">
+            <Link key={r.id} href={`/admin/receipts/${r.id}/print`} className="investRow investRowLink">
               <div className="investRowInfo">
                 <b>{r.receipt_code} · {r.customers?.company_name || r.customers?.name}</b>
                 <span>{r.bookings?.booking_code} · {r.bookings?.project_name} · {fmtDate(r.issued_at)}</span>
@@ -132,7 +133,7 @@ export default async function InvestPage() {
                   <span className="investBalanceDue">Balance {money(r.balance_inr)}</span>
                 )}
               </div>
-            </div>
+            </Link>
           ))}
         </section>
       )}

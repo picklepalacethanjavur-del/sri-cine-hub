@@ -553,6 +553,7 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
 .investCardTitle{font-size:16px;font-weight:900;margin:0 0 16px}
 .investRow{display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+.investRowLink{text-decoration:none;color:inherit;border-radius:8px;padding:13px 8px;margin:0 -8px;transition:background .15s}.investRowLink:hover{background:#1a1710}
 .investRow:first-of-type{border-top:none}
 .investRowInfo{flex:1;display:grid;gap:4px;min-width:0}
 .investRowInfo b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
