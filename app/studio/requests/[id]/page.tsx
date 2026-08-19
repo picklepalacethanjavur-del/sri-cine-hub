@@ -4,7 +4,7 @@ import { QuoteBuilder } from "./QuoteBuilder";
 
 export default async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user } = await requireStaff();
+  const { supabase, user, profile } = await requireStaff();
 
   const [
     { data: req },
@@ -69,6 +69,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
       rentalDays={rentalDays}
       internalRates={internalRates || []}
       userId={user.id}
+      isAdmin={profile.role === "admin"}
     />
   );
 }

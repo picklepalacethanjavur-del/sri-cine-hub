@@ -466,8 +466,10 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .quoteClientMeta span{font-size:12px;color:var(--muted)}
 .quoteClientNotes{color:#a09870!important;font-style:italic}
 .quoteExistingList{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.quoteExistingChipWrap{display:inline-flex;align-items:center;gap:2px}
 .quoteExistingChip{display:inline-flex;align-items:center;gap:6px;border:1px solid #45412d;border-radius:999px;padding:5px 12px;font-size:11px;color:var(--gold2);background:#18150c}
 .quoteExistingChip span{color:var(--muted)}
+.quoteChipDelete{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid #7a2e2e;background:transparent;color:#ff8383;font-size:13px;line-height:1;cursor:pointer;padding:0;transition:background .15s,border-color .15s}.quoteChipDelete:hover:not(:disabled){background:#3f1b1b;border-color:#ff6060}.quoteChipDelete:disabled{opacity:.5;cursor:not-allowed}
 .quoteBuilderStudio{display:grid;grid-template-columns:440px 1fr;gap:28px;align-items:start}
 .quoteAddPanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:sticky;top:20px;max-height:calc(100vh - 80px);display:flex;flex-direction:column}
 .quoteAddTabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line);background:#0d0d0d}

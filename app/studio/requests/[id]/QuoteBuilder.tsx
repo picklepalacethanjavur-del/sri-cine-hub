@@ -27,10 +27,11 @@ type Line = {
 
 function newKey() { return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; }
 
-export function QuoteBuilder({ request, cameras, accessories, supplierItems, existingQuotes, bookedCameraIds, bookedAccessoryIds, rentalDays, internalRates }: any) {
+export function QuoteBuilder({ request, cameras, accessories, supplierItems, existingQuotes, bookedCameraIds, bookedAccessoryIds, rentalDays, internalRates, isAdmin }: any) {
   const supabase = createClient();
   const router = useRouter();
   const [lines, setLines] = useState<Line[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tab, setTab] = useState<"own" | "supplier" | "manual">("own");
   const [ownSearch, setOwnSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
@@ -43,6 +44,14 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
 
   const subtotal = lines.reduce((n, l) => n + (l.quantity * l.rental_days * l.quoted_rate_inr), 0);
   const total = Math.max(0, subtotal - discount);
+
+  async function deleteQuote(qid: string, code: string) {
+    if (!window.confirm(`Delete ${code}? This cannot be undone.`)) return;
+    setDeletingId(qid);
+    await supabase.from("quotations").delete().eq("id", qid);
+    setDeletingId(null);
+    router.refresh();
+  }
 
   function flashAdded(id: string) {
     setAddedIds(prev => new Set([...prev, id]));
@@ -309,9 +318,21 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         {existingQuotes.length > 0 && (
           <div className="quoteExistingList">
             {existingQuotes.map((q: any) => (
-              <Link key={q.id} href={`/admin/quotations/${q.id}`} className="quoteExistingChip">
-                {q.quotation_code} · {money(q.total_inr)} · <span>{q.status}</span>
-              </Link>
+              <span key={q.id} className="quoteExistingChipWrap">
+                <Link href={`/admin/quotations/${q.id}`} className="quoteExistingChip">
+                  {q.quotation_code} · {money(q.total_inr)} · <span>{q.status}</span>
+                </Link>
+                {isAdmin && (
+                  <button
+                    className="quoteChipDelete"
+                    disabled={deletingId === q.id}
+                    onClick={() => deleteQuote(q.id, q.quotation_code)}
+                    title="Delete this quotation"
+                  >
+                    {deletingId === q.id ? "…" : "×"}
+                  </button>
+                )}
+              </span>
             ))}
           </div>
         )}
