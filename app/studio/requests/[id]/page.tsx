@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { QuoteBuilder } from "./QuoteBuilder";
 
@@ -26,6 +26,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
   ]);
 
   if (!req) notFound();
+
+  // One draft per request: redirect directly to the existing draft
+  const draft = (existingQuotes || []).find((q: any) => q.status === "draft");
+  if (draft) redirect(`/admin/quotations/${draft.id}`);
 
   let bookedCameraIds: string[] = [];
   let bookedAccessoryIds: string[] = [];
