@@ -581,6 +581,20 @@ header.siteHeader{position:sticky;top:0;z-index:20;background:rgba(8,8,8,.88);ba
 .investBreakdownRow{display:grid;grid-template-columns:1fr 70px 120px 160px 160px 110px;gap:10px;padding:12px 10px;border-bottom:1px solid var(--line);align-items:center;min-width:700px}
 .investBreakdownHead7{grid-template-columns:1fr 70px 110px 140px 140px 100px 110px}
 .investBreakdownRow7{grid-template-columns:1fr 70px 110px 140px 140px 100px 110px}
+.investBreakdownHead8{grid-template-columns:1fr 72px 72px 110px 130px 130px 100px 90px}
+.investBreakdownRow8{grid-template-columns:1fr 72px 72px 110px 130px 130px 100px 90px}
+.investBreakdownNote{font-size:11px;color:var(--muted);margin:-10px 0 14px}
+.investWaterfallCard{margin-bottom:0}
+.investWaterfall{display:grid;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.investWaterfallRow{display:grid;grid-template-columns:1fr 80px 160px;gap:12px;align-items:center;padding:13px 16px;font-size:13px}
+.investWaterfallRow span:first-child{font-weight:600}
+.investWaterfallPct{font-size:12px;font-weight:800;color:var(--muted);text-align:right}
+.investWaterfallAmt{text-align:right;color:#ff9966;font-weight:700}
+.investWaterfallRow.gross{background:#16130c;border-bottom:1px solid var(--line)}
+.investWaterfallRow.gross strong{text-align:right;font-size:15px;color:var(--gold2)}
+.investWaterfallRow.deduct{background:#110c08;border-bottom:1px solid var(--line);color:var(--muted)}
+.investWaterfallRow.pool{background:#0d1a10}
+.investWaterfallPool{color:#a8f0be;font-size:15px;text-align:right}
 .investBreakdownRow:last-child{border-bottom:none}
 .investBreakdownRow b{font-size:13px}
 .investBreakdownRow small{display:block;font-size:11px;color:var(--muted)}
