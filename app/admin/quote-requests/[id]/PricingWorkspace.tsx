@@ -49,7 +49,7 @@ export function PricingWorkspace({request,cameras,accessories,kits,rates,supplie
       <div><span>Notes</span><b>{request.notes||"—"}</b></div>
     </div>
 
-    {existingQuotes.length>0&&<div className="existingQuoteRibbon"><span>Existing:</span>{existingQuotes.map((q:any)=><Link href={`/admin/quotations/${q.id}/print`} key={q.id}>{q.quotation_code} · {money(q.total_inr)}</Link>)}</div>}
+    {existingQuotes.length>0&&<div className="existingQuoteRibbon"><span>Existing:</span>{existingQuotes.map((q:any)=><Link href={`/admin/quotations/${q.id}`} key={q.id}>{q.quotation_code} · {money(q.total_inr)}</Link>)}</div>}
 
     <div className="v6WorkspaceHeading"><div><div className="eyebrow">V6 QUOTATION BUILDER</div><h2>Build the package without leaving the screen</h2><p>Search on the left. Every item you add goes to the current quotation on the right.</p></div></div>
 
