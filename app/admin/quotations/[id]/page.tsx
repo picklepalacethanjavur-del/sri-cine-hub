@@ -1,3 +1,4 @@
+import {notFound} from "next/navigation";import Link from "next/link";import {RequestDocuments} from "@/components/RequestDocuments";import {requireStaff} from "@/lib/auth";import {QuotationEditor} from "./QuotationEditor";import {DeleteQuotationButton} from "./DeleteQuotationButton";
 export default async function QuotationDetail({params}:{params:Promise<{id:string}>}){
  const {id}=await params;const {supabase,user,profile}=await requireStaff();
  const [{data:q},{data:items},{data:requestWrap},{data:cameras},{data:accessories},{data:kits},{data:rates},{data:supplierItems}]=await Promise.all([

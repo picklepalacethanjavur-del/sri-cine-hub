@@ -1,1 +1,2 @@
+import {requireStaff} from "@/lib/auth";import {InventoryManager} from "./InventoryManager";
 export default async function Inventory(){const {supabase}=await requireStaff();const [{data:cameras},{data:accessories}]=await Promise.all([supabase.from("cameras").select("*").order("camera_code"),supabase.from("accessories").select("*").order("accessory_code")]);return <section className="adminShell"><div className="eyebrow">SERIALIZED ASSETS</div><h1>Inventory & tags</h1><InventoryManager cameras={cameras||[]} accessories={accessories||[]}/></section>}
