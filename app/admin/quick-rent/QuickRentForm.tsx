@@ -133,7 +133,7 @@ export function QuickRentForm({
         if (error) throw error;
       }
 
-      router.push(`/admin/bookings/${b.id}`);
+      router.push(`/admin/operations?booking=${b.id}`);
     } catch (e: any) {
       setErr(e?.message || e?.details || "Checkout failed.");
       setBusy(false);
