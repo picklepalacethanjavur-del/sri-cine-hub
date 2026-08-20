@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { parseEquipmentText, type CatalogEntry, type ParsedEquipmentItem } from "@/lib/parseEquipmentText";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 function fmtDate(v?: string | null) {
@@ -32,7 +33,9 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
   const router = useRouter();
   const [lines, setLines] = useState<Line[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"own" | "supplier" | "manual">("own");
+  const [tab, setTab] = useState<"import" | "own" | "supplier" | "manual">(
+    request?.notes?.trim() ? "import" : "own"
+  );
   const [ownSearch, setOwnSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
   const [saving, setSaving] = useState<"draft" | "generate" | null>(null);
@@ -41,6 +44,85 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const autoSavedIdRef = useRef<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"" | "saving" | "saved">("");
+
+  // Import tab state
+  const [importText, setImportText] = useState<string>(request?.notes?.trim() || "");
+  const [importItems, setImportItems] = useState<ParsedEquipmentItem[]>([]);
+  const [importAddedKeys, setImportAddedKeys] = useState<Set<string>>(new Set());
+  const [importParsed, setImportParsed] = useState(false);
+  const [importErr, setImportErr] = useState("");
+
+  const importCatalog = useMemo<CatalogEntry[]>(() => {
+    const rateMap = new Map<string, number>();
+    for (const r of internalRates || []) {
+      if (r.camera_id && !rateMap.has(`c-${r.camera_id}`)) rateMap.set(`c-${r.camera_id}`, r.daily_rate_inr);
+      if (r.accessory_id && !rateMap.has(`a-${r.accessory_id}`)) rateMap.set(`a-${r.accessory_id}`, r.daily_rate_inr);
+    }
+    return [
+      ...(cameras || []).map((c: any) => ({
+        id: c.id, type: "camera" as const, code: c.camera_code,
+        name: [c.name, c.manufacturer, c.model].filter(Boolean).join(" "),
+        rate: rateMap.get(`c-${c.id}`) || 0,
+      })),
+      ...(accessories || []).map((a: any) => ({
+        id: a.id, type: "accessory" as const, code: a.accessory_code,
+        name: [a.name, a.category].filter(Boolean).join(" "),
+        rate: rateMap.get(`a-${a.id}`) || 0,
+      })),
+    ];
+  }, [cameras, accessories, internalRates]);
+
+  // Auto-parse if request has equipment notes
+  useEffect(() => {
+    if (request?.notes?.trim() && importCatalog.length > 0) {
+      const parsed = parseEquipmentText(request.notes, importCatalog);
+      setImportItems(parsed);
+      setImportParsed(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function runImportParse() {
+    if (!importText.trim()) return;
+    const parsed = parseEquipmentText(importText, importCatalog);
+    if (!parsed.length) { setImportErr("No items found. Try adding * or - before each item."); return; }
+    setImportErr("");
+    setImportItems(parsed);
+    setImportParsed(true);
+    setImportAddedKeys(new Set());
+  }
+
+  function addParsedLine(item: ParsedEquipmentItem) {
+    const days = item.rental_days > 1 ? item.rental_days : rentalDays;
+    if (item.item_type === "camera") {
+      const cam = (cameras || []).find((c: any) => c.id === item.item_id);
+      setLines(prev => [...prev, {
+        key: newKey(), description: cam ? `${cam.camera_code} · ${cam.name}` : item.description,
+        section_name: "Cameras", quantity: item.quantity, rental_days: days,
+        quoted_rate_inr: item.rate, source_type: "own_camera", item_id: item.item_id,
+        supplier_id: "", supplier_catalog_item_id: "", internal_cost_inr: 0, notes: "",
+      }]);
+    } else if (item.item_type === "accessory") {
+      const acc = (accessories || []).find((a: any) => a.id === item.item_id);
+      setLines(prev => [...prev, {
+        key: newKey(), description: acc ? `${acc.accessory_code} · ${acc.name}` : item.description,
+        section_name: acc?.category || "Accessories", quantity: item.quantity, rental_days: days,
+        quoted_rate_inr: item.rate, source_type: "own_accessory", item_id: item.item_id,
+        supplier_id: "", supplier_catalog_item_id: "", internal_cost_inr: 0, notes: "",
+      }]);
+    } else {
+      setLines(prev => [...prev, {
+        key: newKey(), description: item.description, section_name: "Other",
+        quantity: item.quantity, rental_days: days, quoted_rate_inr: item.rate,
+        source_type: "manual", item_id: "", supplier_id: "", supplier_catalog_item_id: "",
+        internal_cost_inr: 0, notes: item.rawLine || "",
+      }]);
+    }
+    setImportAddedKeys(prev => new Set([...prev, item.key]));
+  }
+
+  function addAllParsed() {
+    importItems.filter(i => !importAddedKeys.has(i.key)).forEach(addParsedLine);
+  }
 
   const subtotal = lines.reduce((n, l) => n + (l.quantity * l.rental_days * l.quoted_rate_inr), 0);
   const total = Math.max(0, subtotal - discount);
@@ -344,10 +426,63 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
         {/* LEFT: Add items */}
         <div className="quoteAddPanel">
           <div className="quoteAddTabs">
+            <button className={tab === "import" ? "active" : ""} onClick={() => setTab("import")}>Import</button>
             <button className={tab === "own" ? "active" : ""} onClick={() => setTab("own")}>Our Gear</button>
             <button className={tab === "supplier" ? "active" : ""} onClick={() => setTab("supplier")}>Supplier</button>
             <button className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")}>Manual</button>
           </div>
+
+          {tab === "import" && (
+            <div className="quoteImportPanel">
+              {!importParsed ? (
+                <>
+                  <textarea
+                    className="quoteImportTextarea"
+                    rows={10}
+                    value={importText}
+                    onChange={e => setImportText(e.target.value)}
+                    placeholder={"Paste WhatsApp message or equipment list:\n\n* Sony FX3 - 2 no's\n* Gimbal - 1\n* 4x4 frames - 8 no's"}
+                  />
+                  {importErr && <p className="studioError">{importErr}</p>}
+                  <button className="btn btnGold" style={{ marginTop: 10, width: "100%" }} disabled={!importText.trim()} onClick={runImportParse}>
+                    Parse →
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="quoteImportResults">
+                    {importItems.map(item => {
+                      const added = importAddedKeys.has(item.key);
+                      return (
+                        <div key={item.key} className={`quoteImportItem${item.item_type === "manual" ? " unmatched" : ""}${added ? " added" : ""}`}>
+                          <div className="quoteImportItemInfo">
+                            {item.item_type !== "manual"
+                              ? <><b>{item.matchedName}</b><span className="quoteImportRaw">{item.rawLine}</span></>
+                              : <b>{item.description}</b>
+                            }
+                            <span className="quoteImportMeta">qty {item.quantity}{item.rental_days > 1 ? ` · ${item.rental_days}d` : ""}{item.rate ? ` · ${money(item.rate)}` : ""}</span>
+                          </div>
+                          <button className={`quoteImportAdd${added ? " done" : ""}`} disabled={added} onClick={() => !added && addParsedLine(item)}>
+                            {added ? "✓" : "+"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="quoteImportActions">
+                    <button className="btn btnGhost" style={{ fontSize: 11 }} onClick={() => { setImportParsed(false); setImportItems([]); setImportAddedKeys(new Set()); }}>
+                      ← Re-paste
+                    </button>
+                    {importItems.some(i => !importAddedKeys.has(i.key)) && (
+                      <button className="btn btnGold" style={{ fontSize: 11 }} onClick={addAllParsed}>
+                        Add all remaining
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {tab === "own" && (
             <div className="quoteOwnPanel">
