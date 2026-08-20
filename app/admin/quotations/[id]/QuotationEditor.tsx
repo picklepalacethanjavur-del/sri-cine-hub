@@ -20,7 +20,7 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
   async function deleteQuotation(){
     if(!window.confirm(`Delete ${quotation.quotation_code}? This cannot be undone.`))return;
     setSavingAction("delete");setMessage("");
-    try{const {error}=await supabase.from("quotations").delete().eq("id",quotation.id);if(error)throw error;location.href=quotation.quote_request_id?`/studio/requests/${quotation.quote_request_id}`:"/admin/quotations";}
+    try{const {error}=await supabase.from("quotations").delete().eq("id",quotation.id);if(error)throw error;location.href=quotation.quote_request_id?`/admin/quote-requests/${quotation.quote_request_id}`:"/admin/quotations";}
     catch(e){setMessage(e instanceof Error?e.message:"Failed to delete quotation.");setSavingAction(null);}
   }
   const subtotal=rows.reduce((n,r)=>n+(r.quantity||0)*(r.rental_days||0)*(r.quoted_rate_inr||0),0);const total=Math.max(0,subtotal-discount+tax+otherCharges);
@@ -35,6 +35,6 @@ export function QuotationEditor({quotation,items,request,cameras,accessories,kit
     <QuotationLineEditor rows={rows} onChange={setRows} cameras={cameras} accessories={accessories} kits={kits} rates={rates} supplierItems={supplierItems} defaultRentalDays={defaultRentalDays} discount={discount} tax={tax} otherCharges={otherCharges} onDiscount={setDiscount} onTax={setTax} onOtherCharges={setOtherCharges}/>
     <div className="v6QuoteFooterBar"><details className="quoteOptionalDetails"><summary>Optional details</summary><div className="optionalDetailsGrid"><label>Customer note<textarea rows={3} value={customerNotes} onChange={e=>setCustomerNotes(e.target.value)} placeholder="Optional"/></label><label>Internal note<textarea rows={3} value={internalNotes} onChange={e=>setInternalNotes(e.target.value)} placeholder="Never shown to customer"/></label></div></details><div className="v6FooterActions">{isAdmin&&<button className="button quoteDeleteBtn" type="button" disabled={saving} onClick={()=>void deleteQuotation()}>{savingAction==="delete"?"Deleting…":"Delete Quote"}</button>}<div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}><div><span>Grand Total</span><b>{money(total)}</b></div><button className="button ghost" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>void saveWithStatus("draft")}>{savingAction==="draft"?"Saving…":"Save Draft"}</button><button className="button gold" type="button" disabled={saving||quotation.status==="converted"} onClick={()=>void saveWithStatus("generated")}>{savingAction==="generate"?"Generating…":"Generate Updated Quotation"}</button><a className="button ghost" href={`/admin/quotations/${quotation.id}/print`}>View Document</a></div></div></div>
     {message&&<div className={message.includes("saved")?"successBox":"errorBox"}>{message}</div>}
-    {saving&&<div className="actionOverlay" role="status"><div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating updated quotation…":"Saving draft…"}</b></div></div>}
+    {saving&&<div className="actionOverlay" role="status"><div className="actionOverlayCard"><span className="loadingSpinner"/><b>{savingAction==="generate"?"Generating updated quotation…":savingAction==="delete"?"Deleting quotation…":"Saving draft…"}</b></div></div>}
   </>;
 }
