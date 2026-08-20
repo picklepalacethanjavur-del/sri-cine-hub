@@ -10,14 +10,29 @@ function daysBetween(a: string, b: string) {
   return Math.max(1, Math.ceil((new Date(b).getTime() - new Date(a).getTime()) / 86400000));
 }
 
-type Camera = { id: string; camera_code: string; name: string; manufacturer: string; catalog_item_id: string | null; };
-type CartItem = { cameraId: string; code: string; name: string; rate: number; };
+type InventoryItem = {
+  id: string;
+  code: string;
+  name: string;
+  brand: string;
+  category: string;
+  type: "camera" | "accessory";
+};
+type Rate = { camera_id: string | null; accessory_id: string | null; daily_rate_inr: number; };
+type CartItem = { item: InventoryItem; rate: number; };
 
-export function QuickRentForm({ cameras, rates }: { cameras: Camera[]; rates: any[] }) {
+export function QuickRentForm({
+  cameras, accessories, rates,
+}: {
+  cameras: any[];
+  accessories: any[];
+  rates: Rate[];
+}) {
   const supabase = createClient();
   const router = useRouter();
 
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "camera" | "accessory">("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,42 +44,54 @@ export function QuickRentForm({ cameras, rates }: { cameras: Camera[]; rates: an
 
   const days = daysBetween(startAt, endAt);
 
-  function defaultRate(cam: Camera) {
-    if (!cam.catalog_item_id) return 0;
-    const r = rates.find((r: any) => r.catalog_item_id === cam.catalog_item_id);
+  const allItems: InventoryItem[] = useMemo(() => [
+    ...cameras.map(c => ({
+      id: c.id, code: c.camera_code, name: c.name,
+      brand: c.manufacturer || "", category: "Camera", type: "camera" as const,
+    })),
+    ...accessories.map(a => ({
+      id: a.id, code: a.accessory_code, name: a.name,
+      brand: "", category: a.category || "Accessory", type: "accessory" as const,
+    })),
+  ], [cameras, accessories]);
+
+  function getRate(item: InventoryItem): number {
+    const r = item.type === "camera"
+      ? rates.find(r => r.camera_id === item.id)
+      : rates.find(r => r.accessory_id === item.id);
     return Number(r?.daily_rate_inr || 0);
   }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    if (!q) return cameras;
-    return cameras.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.camera_code.toLowerCase().includes(q) ||
-      (c.manufacturer || "").toLowerCase().includes(q)
-    );
-  }, [cameras, search]);
+    return allItems.filter(i => {
+      if (filter === "camera" && i.type !== "camera") return false;
+      if (filter === "accessory" && i.type !== "accessory") return false;
+      if (!q) return true;
+      return i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q) || i.brand.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
+    });
+  }, [allItems, search, filter]);
 
-  function toggle(cam: Camera) {
-    if (cart.find(i => i.cameraId === cam.id)) {
-      setCart(prev => prev.filter(i => i.cameraId !== cam.id));
+  function toggle(item: InventoryItem) {
+    if (cart.find(c => c.item.id === item.id)) {
+      setCart(prev => prev.filter(c => c.item.id !== item.id));
     } else {
-      setCart(prev => [...prev, { cameraId: cam.id, code: cam.camera_code, name: cam.name, rate: defaultRate(cam) }]);
+      setCart(prev => [...prev, { item, rate: getRate(item) }]);
     }
   }
 
   function setRate(id: string, rate: number) {
-    setCart(prev => prev.map(i => i.cameraId === id ? { ...i, rate } : i));
+    setCart(prev => prev.map(c => c.item.id === id ? { ...c, rate } : c));
   }
 
-  const total = cart.reduce((s, i) => s + i.rate * days, 0);
+  const subtotal = cart.reduce((s, c) => s + c.rate * days, 0);
 
   async function checkout() {
     setErr("");
     if (!name.trim()) { setErr("Customer name is required."); return; }
     if (!startAt || !endAt) { setErr("Set rental dates."); return; }
     if (new Date(endAt) <= new Date(startAt)) { setErr("Return date must be after checkout date."); return; }
-    if (cart.length === 0) { setErr("Add at least one camera."); return; }
+    if (cart.length === 0) { setErr("Add at least one item."); return; }
     setBusy(true);
     try {
       const { data: c, error: ce } = await supabase.from("customers").insert({
@@ -84,16 +111,27 @@ export function QuickRentForm({ cameras, rates }: { cameras: Camera[]; rates: an
         contact_phone: phone.trim() || null,
         start_at: new Date(startAt).toISOString(),
         end_at: new Date(endAt).toISOString(),
-        camera_charge_inr: total,
+        camera_charge_inr: subtotal,
         other_charges_inr: 0,
         discount_inr: 0,
       }).select("id").single();
       if (be) throw be;
 
-      const { error: ae } = await supabase.from("booking_cameras").insert(
-        cart.map(i => ({ booking_id: b.id, camera_id: i.cameraId }))
-      );
-      if (ae) throw ae;
+      const camItems = cart.filter(c => c.item.type === "camera");
+      const accItems = cart.filter(c => c.item.type === "accessory");
+
+      if (camItems.length) {
+        const { error } = await supabase.from("booking_cameras").insert(
+          camItems.map(c => ({ booking_id: b.id, camera_id: c.item.id }))
+        );
+        if (error) throw error;
+      }
+      if (accItems.length) {
+        const { error } = await supabase.from("booking_accessories").insert(
+          accItems.map(c => ({ booking_id: b.id, accessory_id: c.item.id, quantity: 1 }))
+        );
+        if (error) throw error;
+      }
 
       router.push(`/admin/bookings/${b.id}`);
     } catch (e: any) {
@@ -109,29 +147,36 @@ export function QuickRentForm({ cameras, rates }: { cameras: Camera[]; rates: an
       <div className="quickRentCatalog">
         <input
           className="quickRentSearch"
-          placeholder="Search cameras, brand…"
+          placeholder="Search cameras, lenses, lights, grip…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           autoFocus
         />
+        <div className="quickRentFilters">
+          {(["all", "camera", "accessory"] as const).map(f => (
+            <button key={f} type="button" className={`quickRentFilter${filter === f ? " active" : ""}`} onClick={() => setFilter(f)}>
+              {f === "all" ? "All" : f === "camera" ? "Cameras" : "Accessories"}
+            </button>
+          ))}
+        </div>
         <div className="quickRentList">
-          {filtered.length === 0 && <p className="quickRentEmpty">No cameras match.</p>}
-          {filtered.map(cam => {
-            const inCart = cart.some(i => i.cameraId === cam.id);
-            const rate = defaultRate(cam);
+          {filtered.length === 0 && <p className="quickRentEmpty">No items match.</p>}
+          {filtered.map(item => {
+            const inCart = cart.some(c => c.item.id === item.id);
+            const rate = getRate(item);
             return (
               <button
-                key={cam.id}
+                key={item.id}
                 type="button"
                 className={`quickRentItem${inCart ? " inCart" : ""}`}
-                onClick={() => toggle(cam)}
+                onClick={() => toggle(item)}
               >
                 <div className="quickRentItemInfo">
-                  <b>{cam.name}</b>
-                  <span>{cam.camera_code} · {cam.manufacturer}</span>
+                  <b>{item.name}</b>
+                  <span>{item.code} · {item.category}{item.brand ? ` · ${item.brand}` : ""}</span>
                 </div>
                 <div className="quickRentItemRight">
-                  {rate > 0 && <span className="quickRentRate">{money(rate)}/day</span>}
+                  <span className="quickRentRate">{rate > 0 ? `${money(rate)}/day` : "—"}</span>
                   <span className="quickRentAddBtn">{inCart ? "✓" : "+"}</span>
                 </div>
               </button>
@@ -177,40 +222,44 @@ export function QuickRentForm({ cameras, rates }: { cameras: Camera[]; rates: an
         </div>
 
         <div className="quickRentSection quickRentCartSection">
-          <p className="quickRentSectionLabel">CART {cart.length > 0 && `· ${cart.length} camera${cart.length > 1 ? "s" : ""}`}</p>
+          <p className="quickRentSectionLabel">SELECTED {cart.length > 0 && `· ${cart.length} item${cart.length > 1 ? "s" : ""}`}</p>
           {cart.length === 0
-            ? <p className="quickRentEmpty">Tap a camera on the left to add it.</p>
-            : cart.map(item => (
-              <div key={item.cameraId} className="quickRentCartItem">
-                <div className="quickRentCartInfo">
-                  <b>{item.name}</b>
-                  <span>{item.code}</span>
-                </div>
-                <div className="quickRentCartRight">
-                  <label className="quickRentRateLabel">
-                    ₹<input
-                      type="number"
-                      min="0"
-                      value={item.rate}
-                      onChange={e => setRate(item.cameraId, Number(e.target.value))}
-                      className="quickRentRateInput"
-                    />/day
-                  </label>
-                  <span className="quickRentLineTotal">{money(item.rate * days)}</span>
-                  <button type="button" className="quickRentRemove" onClick={() => toggle({ id: item.cameraId } as any)}>×</button>
-                </div>
-              </div>
-            ))
+            ? <p className="quickRentEmpty">Tap any item on the left to add it.</p>
+            : <>
+                {cart.map(({ item, rate }) => (
+                  <div key={item.id} className="quickRentCartItem">
+                    <div className="quickRentCartInfo">
+                      <b>{item.name}</b>
+                      <span>{item.code} · {item.category}</span>
+                    </div>
+                    <div className="quickRentCartRight">
+                      <label className="quickRentRateLabel">
+                        ₹<input
+                          type="number"
+                          min="0"
+                          value={rate}
+                          onChange={e => setRate(item.id, Number(e.target.value))}
+                          className="quickRentRateInput"
+                        />/day
+                      </label>
+                      <span className="quickRentLineTotal">{money(rate * days)}</span>
+                      <button type="button" className="quickRentRemove" onClick={() => toggle(item)}>×</button>
+                    </div>
+                  </div>
+                ))}
+              </>
           }
         </div>
 
-        {err && <p className="studioError">{err}</p>}
+        {err && <p className="studioError" style={{ margin: "0 16px" }}>{err}</p>}
 
         <div className="quickRentFooter">
           <div className="quickRentTotal">
             <span>Total</span>
-            <b>{money(total)}</b>
-            {startAt && endAt && <span className="quickRentTotalDays">for {days} day{days !== 1 ? "s" : ""}</span>}
+            <b>{money(subtotal)}</b>
+            {startAt && endAt && cart.length > 0 && (
+              <span className="quickRentTotalDays">for {days} day{days !== 1 ? "s" : ""}</span>
+            )}
           </div>
           <button
             type="button"
