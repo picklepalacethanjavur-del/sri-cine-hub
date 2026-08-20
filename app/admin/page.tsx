@@ -1,5 +1,3 @@
-import { AdminNav } from "@/components/AdminNav";
-import { SignOutButton } from "@/components/SignOutButton";
 import { requireStaff } from "@/lib/auth";
 import Link from "next/link";
 
@@ -56,15 +54,10 @@ export default async function Today() {
 
   return (
     <section className="adminShell">
-      <div className="adminTitle">
-        <div>
-          <div className="eyebrow">SRI CINE HUB</div>
-          <h1>Today</h1>
-          <p>{profile.full_name || user.email}</p>
-        </div>
-        <div><span className="roleBadge">{profile.role}</span><SignOutButton /></div>
-      </div>
-      <AdminNav />
+      <div className="eyebrow">SRI CINE HUB</div>
+      <h1>Today</h1>
+      <p>{profile.full_name || user.email}</p>
+
 
       <div className="metricGrid">
         <div className="metric"><span>Available</span><b>{cams.filter((c: any) => c.status === "available").length}</b></div>
@@ -131,7 +124,7 @@ export default async function Today() {
         <div className="adminPanel todaySection">
           <h2>Quotes needing attention</h2>
           {(newRequests || []).map((r: any) => (
-            <Link href={`/admin/quote-requests/${r.id}`} className="todayRow" key={r.id}>
+            <Link href={`/studio/requests/${r.id}`} className="todayRow" key={r.id}>
               <div>
                 <b>{r.request_code} · {r.company_name || r.name || "Untitled"}</b>
                 <span>{r.project_name || "No project name"} · received {fmt(r.created_at)}</span>
@@ -140,7 +133,7 @@ export default async function Today() {
             </Link>
           ))}
           {(pricingRequests || []).map((r: any) => (
-            <Link href={`/admin/quote-requests/${r.id}`} className="todayRow" key={r.id}>
+            <Link href={`/studio/requests/${r.id}`} className="todayRow" key={r.id}>
               <div>
                 <b>{r.request_code} · {r.company_name || r.name || "Untitled"}</b>
                 <span>{r.project_name || "No project name"}</span>

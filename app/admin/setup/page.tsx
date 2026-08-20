@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
 import { requireStaff } from "@/lib/auth";
 
 export default async function Setup() {
@@ -18,7 +17,7 @@ export default async function Setup() {
     <section className="adminShell">
       <div className="eyebrow">CATALOG & CONFIGURATION</div>
       <h1>Setup</h1>
-      <AdminNav />
+      
 
       <div className="hubGrid">
         <Link href="/admin/inventory" className="hubCard">

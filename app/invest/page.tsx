@@ -61,10 +61,14 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
         .in("camera_id", camIds)
     : { data: [] };
 
+  // Only count bookings that actually happened (camera left the studio).
+  // reserved/confirmed/preparing can be cancelled any time — exclude them.
+  const INVESTOR_STATUSES = new Set(["checked_out", "overdue", "returned"]);
   const bookingMap = new Map<string, any>();
   for (const row of (bookingCamRows || [])) {
     const b = (row as any).bookings;
     if (!b) continue;
+    if (!INVESTOR_STATUSES.has(b.status)) continue;
     if (allTime || new Date(b.start_at).getFullYear() === Number(year))
       if (!bookingMap.has(b.id)) bookingMap.set(b.id, b);
   }
@@ -86,7 +90,7 @@ export default async function InvestPage({ searchParams }: { searchParams: Promi
   const totalReceived = (receipts || []).reduce((n: number, r: any) => n + Number(r.amount_paid_inr || 0), 0);
   const totalBalance = (receipts || []).reduce((n: number, r: any) => n + Number(r.balance_inr || 0), 0);
   const activeCount = bookings.filter((b: any) =>
-    ["checked_out", "overdue", "reserved", "confirmed", "preparing"].includes(b.status)
+    ["checked_out", "overdue"].includes(b.status)
   ).length;
 
   // Waterfall on received revenue

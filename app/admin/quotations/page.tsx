@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
 import { requireStaff } from "@/lib/auth";
 
 function pretty(status:string){
@@ -17,7 +16,7 @@ export default async function Quotations(){
   return <section className="adminShell">
     <div className="eyebrow">GENERATED CUSTOMER DOCUMENTS</div>
     <h1>Quotations</h1>
-    <AdminNav/>
+    
     {error&&<div className="errorBox">{error.message}</div>}
 
     <div className="metricGrid quoteMetrics">

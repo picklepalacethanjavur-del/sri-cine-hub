@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
 import { requireStaff } from "@/lib/auth";
 
 const money = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -43,7 +42,7 @@ export default async function Deals() {
     <section className="adminShell">
       <div className="eyebrow">PIPELINE</div>
       <h1>Deals</h1>
-      <AdminNav />
+      
 
       <div className="metricGrid">
         <div className="metric"><span>Open requests</span><b>{(requests || []).length}</b></div>
@@ -56,7 +55,7 @@ export default async function Deals() {
         <div className="adminPanel">
           <div className="panelHeading"><h2>Requests — waiting for quote</h2><Link className="button ghost" href="/admin/quote-requests">All Requests</Link></div>
           {(requests || []).map((r: any) => (
-            <Link href={`/admin/quote-requests/${r.id}`} className="dealRow" key={r.id}>
+            <Link href={`/studio/requests/${r.id}`} className="dealRow" key={r.id}>
               <span className={`stageDot request`} />
               <div className="dealInfo">
                 <b>{r.request_code} · {r.company_name || r.name || "Untitled"}</b>

@@ -1,5 +1,4 @@
 import { requireStaff } from "@/lib/auth";
-import { AdminNav } from "@/components/AdminNav";
 import { QuickRentForm } from "./QuickRentForm";
 
 export default async function QuickRentPage() {
@@ -14,7 +13,7 @@ export default async function QuickRentPage() {
     <section className="adminShell v6AdminShell">
       <div className="eyebrow">WALK-IN</div>
       <h1>Quick Rent</h1>
-      <AdminNav />
+      
       <QuickRentForm cameras={cameras || []} accessories={accessories || []} rates={rates || []} />
     </section>
   );

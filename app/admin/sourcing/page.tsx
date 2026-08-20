@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
 import { requireStaff } from "@/lib/auth";
 
 export default async function Sourcing() {
@@ -15,7 +14,7 @@ export default async function Sourcing() {
     <section className="adminShell">
       <div className="eyebrow">EXTERNAL EQUIPMENT</div>
       <h1>Sourcing</h1>
-      <AdminNav />
+      
 
       <div className="hubGrid">
         <Link href="/admin/suppliers" className="hubCard">

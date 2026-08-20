@@ -1,7 +1,7 @@
 import { requireStaff } from "@/lib/auth";
 import { StudioNav } from "@/components/StudioNav";
 
-export default async function StudioLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { profile, user } = await requireStaff();
   return (
     <div className="studioShell">
