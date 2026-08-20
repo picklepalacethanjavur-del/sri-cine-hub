@@ -34,12 +34,13 @@ function matchScore(query: string, target: string): number {
 }
 
 function isSectionHeader(line: string): boolean {
-  // Only skip if there is NO list marker (* - •) — lines with markers are always items
-  if (/^[*•\-\d]/.test(line.trim())) return false;
-  // Single-word letter-only lines without a marker are section labels ("Camera", "Lights")
-  // Multi-word lines without markers ("Batis Lens Kit") are still treated as items
-  const clean = line.trim();
-  return /^[A-Za-z]+$/.test(clean) && clean.length <= 20;
+  const t = line.trim();
+  // Divider lines: ----, ====, ____
+  if (/^[-=_]{3,}\s*$/.test(t)) return true;
+  // Lines with list markers (* • # digit+dot) are always items, never headers
+  if (/^[*•#]/.test(t) || /^\d+[.)]\s/.test(t) || /^\d+\.\S/.test(t)) return false;
+  // Single-word letter-only lines without markers → section label ("Camera", "Lights", "Grip")
+  return /^[A-Za-z]+$/.test(t) && t.length <= 25;
 }
 
 function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
@@ -56,29 +57,36 @@ function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
     let qty = 1;
     let days = 1;
 
-    // 1. Strip list markers (* - • 1. etc.)
-    raw = raw.replace(/^[*•\-\d.)\s]+/, "").trim();
+    // 1. Strip numbered list prefix "1. " "2) " "3." — but NOT product-name digits like "4x4", "7.5kw"
+    //    Pattern: digit(s) followed by . or ) then optional space — only at very start
+    raw = raw.replace(/^\d+[.)]\s*/, "").trim();
+    // Strip symbol list markers * • # - at start
+    raw = raw.replace(/^[*•#\-]\s*/, "").trim();
     if (!raw || raw.length < 2) continue;
 
-    // 2. Strip price suffixes: "= 11000", "= 1000 = 1600" (must come before qty detection)
-    raw = raw.replace(/\s*=\s*[\d,]+.*$/, "").trim();
+    // 2. Strip trailing parenthetical annotations "(gimbal & softbox)", "(satin chimera black"
+    //    Handles both closed "(x)" and unclosed "(x" at end of line
+    raw = raw.replace(/\s*\([^)]*\)?\s*$/, "").trim();
 
-    // 3. Extract trailing qty: "– 2 Nos." / "- 3 nos" / "– 2" at end of string
-    //    Use em-dash OR hyphen only when followed by digits (avoids stripping hyphenated names)
-    const trailingQty = raw.match(/\s*[––]\s*(\d+)\.?\s*(?:nos?\.?|pcs?\.?|units?\.?)?\s*$/i);
-    if (trailingQty) {
+    // 3. Strip large-number price suffixes "= 11000" (3+ digit numbers = price, not qty)
+    raw = raw.replace(/\s*=\s*\d{3,}.*$/, "").trim();
+
+    // 4. Extract trailing qty — handles:
+    //    "- 2 no's"  "– 3 Nos."  "= 1 no"  "- 4"  "- 8no's"
+    const trailingQty = raw.match(/\s*[-–=]\s*(\d+)\.?\s*(?:no'?s?\.?|nos?\.?|pcs?\.?|units?\.?)?\s*$/i);
+    if (trailingQty && trailingQty.index !== undefined) {
       qty = parseInt(trailingQty[1]);
       raw = raw.slice(0, trailingQty.index).trim();
     }
 
-    // 4. Extract leading/other qty patterns (only if not already found)
+    // 5. Extract leading / inline qty (only if not already found above)
     if (qty === 1) {
       const qPatterns: [RegExp, number][] = [
-        [/^(\d+)\s*[x×]\s*/i, 1],
-        [/\s*[x×]\s*(\d+)\s*$/i, 1],
-        [/^(\d+)\s+(?:nos?\.?|pcs?\.?|units?)\s+/i, 1],
-        [/\((\d+)\s*(?:nos?\.?|pcs?\.?|units?)?\)\s*$/, 1],
-        [/^qty\s*[:\-]?\s*(\d+)\s*/i, 1],
+        [/^(\d+)\s*[x×]\s+/i, 1],          // "2x Arri", "2× Arri"
+        [/\s+[x×]\s*(\d+)\s*$/i, 1],        // "Arri x2"
+        [/^(\d+)\s+(?:no'?s?|nos?|pcs?|units?)\s+/i, 1], // "2 nos Arri"
+        [/\((\d+)\s*(?:no'?s?|nos?|pcs?|units?)?\)\s*$/, 1], // "Arri (2)"
+        [/^qty\s*[:\-]?\s*(\d+)\s*/i, 1],   // "qty: 2 Arri"
       ];
       for (const [pat, grp] of qPatterns) {
         const m = raw.match(pat);
@@ -86,14 +94,14 @@ function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
       }
     }
 
-    // 5. Extract rental days
+    // 6. Extract rental days
     const dm = raw.match(/\bfor\s+(\d+)\s+days?\b|\b(\d+)\s+days?\b/i);
     if (dm) { days = parseInt(dm[1] || dm[2]); raw = raw.replace(dm[0], "").trim(); }
 
     raw = raw.trim();
     if (!raw || raw.length < 2) continue;
 
-    // 6. Fuzzy match against catalog
+    // 7. Fuzzy match against catalog
     let best: CatalogItem | null = null;
     let bestScore = 0;
     for (const item of catalog) {
