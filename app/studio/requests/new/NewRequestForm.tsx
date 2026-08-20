@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,21 +9,23 @@ export function NewRequestForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
+  const startRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     setBusy(true); setErr("");
-    const startVal = String(f.get("start_at") || "").trim();
-    const endVal   = String(f.get("end_at")   || "").trim();
     try {
       const { data, error } = await supabase.from("quote_requests").insert({
         company_name: String(f.get("company") || "").trim() || null,
         name:         String(f.get("name")    || "").trim() || null,
         project_name: String(f.get("project") || "").trim() || null,
         phone:        String(f.get("phone")   || "").trim() || null,
-        start_at:     startVal ? new Date(startVal).toISOString() : null,
-        end_at:       endVal   ? new Date(endVal).toISOString()   : null,
+        start_at:     startAt ? new Date(startAt).toISOString() : null,
+        end_at:       endAt   ? new Date(endAt).toISOString()   : null,
         notes:        String(f.get("notes")   || "").trim() || null,
         status: "new",
       }).select("id").single();
@@ -61,11 +63,30 @@ export function NewRequestForm() {
         <div className="newReqMidGrid">
           <label className="newReqLabel">
             Shoot start
-            <input name="start_at" type="date" className="newReqInput" />
+            <div className="newReqDateWrap" onClick={() => startRef.current?.showPicker?.()}>
+              <span className="newReqDateIcon">📅</span>
+              <input
+                ref={startRef}
+                type="date"
+                className="newReqDateInput"
+                value={startAt}
+                onChange={e => setStartAt(e.target.value)}
+              />
+            </div>
           </label>
           <label className="newReqLabel">
             Return date
-            <input name="end_at" type="date" className="newReqInput" />
+            <div className="newReqDateWrap" onClick={() => endRef.current?.showPicker?.()}>
+              <span className="newReqDateIcon">📅</span>
+              <input
+                ref={endRef}
+                type="date"
+                className="newReqDateInput"
+                min={startAt}
+                value={endAt}
+                onChange={e => setEndAt(e.target.value)}
+              />
+            </div>
           </label>
           <label className="newReqLabel">
             Phone / WhatsApp
