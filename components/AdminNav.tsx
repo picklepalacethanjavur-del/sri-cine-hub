@@ -3,11 +3,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/admin",          label: "Today",    exact: true },
-  { href: "/admin/deals",    label: "Deals"               },
-  { href: "/admin/sourcing", label: "Sourcing"            },
-  { href: "/admin/calendar", label: "Calendar"            },
-  { href: "/admin/setup",    label: "Setup"               },
+  { href: "/admin",             label: "Today",      exact: true },
+  { href: "/admin/quick-rent",  label: "Quick Rent"             },
+  { href: "/admin/deals",       label: "Deals"                  },
+  { href: "/admin/sourcing",    label: "Sourcing"               },
+  { href: "/admin/calendar",    label: "Calendar"               },
+  { href: "/admin/setup",       label: "Setup"                  },
 ];
 
 export function AdminNav() {
