@@ -49,7 +49,7 @@ export function QuoteBuilder({ request, cameras, accessories, supplierItems, exi
   const [importText, setImportText] = useState<string>(request?.notes?.trim() || "");
   const [importItems, setImportItems] = useState<ParsedEquipmentItem[]>([]);
   const [importAddedKeys, setImportAddedKeys] = useState<Set<string>>(new Set());
-  const [importParsed, setImportParsed] = useState(false);
+  const [importParsed, setImportParsed] = useState(!!request?.notes?.trim());
   const [importErr, setImportErr] = useState("");
 
   const importCatalog = useMemo<CatalogEntry[]>(() => {

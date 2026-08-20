@@ -41,8 +41,32 @@ export function QuickRentForm({
   const [endAt, setEndAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [unavailCams, setUnavailCams] = useState<Set<string>>(new Set());
+  const [unavailAccs, setUnavailAccs] = useState<Set<string>>(new Set());
 
   const days = daysBetween(startAt, endAt);
+
+  useEffect(() => {
+    if (!startAt || !endAt) { setUnavailCams(new Set()); setUnavailAccs(new Set()); return; }
+    const start = new Date(startAt).toISOString();
+    const end = new Date(endAt).toISOString();
+    Promise.all([
+      supabase.from("booking_cameras").select("camera_id, bookings!inner(start_at,end_at,status)")
+        .neq("bookings.status", "cancelled").neq("bookings.status", "returned")
+        .lt("bookings.start_at", end).gt("bookings.end_at", start),
+      supabase.from("booking_accessories").select("accessory_id, bookings!inner(start_at,end_at,status)")
+        .neq("bookings.status", "cancelled").neq("bookings.status", "returned")
+        .lt("bookings.start_at", end).gt("bookings.end_at", start),
+    ]).then(([{ data: cams }, { data: accs }]) => {
+      setUnavailCams(new Set((cams || []).map((x: any) => x.camera_id)));
+      setUnavailAccs(new Set((accs || []).map((x: any) => x.accessory_id)));
+      // remove unavailable items from cart
+      setCart(prev => prev.filter(c =>
+        c.item.type === "camera" ? !(cams || []).some((x: any) => x.camera_id === c.item.id)
+        : !(accs || []).some((x: any) => x.accessory_id === c.item.id)
+      ));
+    });
+  }, [startAt, endAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allItems: InventoryItem[] = useMemo(() => [
     ...cameras.map(c => ({
@@ -164,20 +188,23 @@ export function QuickRentForm({
           {filtered.map(item => {
             const inCart = cart.some(c => c.item.id === item.id);
             const rate = getRate(item);
+            const unavailable = item.type === "camera" ? unavailCams.has(item.id) : unavailAccs.has(item.id);
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`quickRentItem${inCart ? " inCart" : ""}`}
-                onClick={() => toggle(item)}
+                className={`quickRentItem${inCart ? " inCart" : ""}${unavailable ? " unavailable" : ""}`}
+                onClick={() => !unavailable && toggle(item)}
+                disabled={unavailable}
+                title={unavailable ? "Already booked for these dates" : undefined}
               >
                 <div className="quickRentItemInfo">
                   <b>{item.name}</b>
                   <span>{item.code} · {item.category}{item.brand ? ` · ${item.brand}` : ""}</span>
                 </div>
                 <div className="quickRentItemRight">
-                  <span className="quickRentRate">{rate > 0 ? `${money(rate)}/day` : "—"}</span>
-                  <span className="quickRentAddBtn">{inCart ? "✓" : "+"}</span>
+                  <span className="quickRentRate">{unavailable ? "Booked" : rate > 0 ? `${money(rate)}/day` : "—"}</span>
+                  <span className="quickRentAddBtn">{unavailable ? "✕" : inCart ? "✓" : "+"}</span>
                 </div>
               </button>
             );
