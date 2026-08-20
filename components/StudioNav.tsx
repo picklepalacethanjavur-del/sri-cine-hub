@@ -6,6 +6,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 const MAIN = [
   { href: "/studio",          label: "Today",    exact: true },
   { href: "/studio/requests", label: "Requests"              },
+  { href: "/studio/import",   label: "Import"                },
   { href: "/studio/bookings", label: "Bookings"              },
   { href: "/studio/ops",      label: "Ops"                   },
   { href: "/studio/receipts", label: "Receipts"              },
