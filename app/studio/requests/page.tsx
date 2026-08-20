@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
-import { NewStudioRequest } from "./NewStudioRequest";
 
 function statusLabel(s: string) {
   const m: Record<string, string> = { new: "New", reviewing: "Pricing", quoted: "Quoted", converted: "Converted", closed: "Closed" };
@@ -8,7 +7,7 @@ function statusLabel(s: string) {
 }
 
 export default async function StudioRequests() {
-  const { supabase, user } = await requireStaff();
+  const { supabase } = await requireStaff();
   const { data } = await supabase
     .from("quote_requests")
     .select("id,request_code,status,company_name,name,project_name,start_at,end_at,phone,created_at")
@@ -24,7 +23,7 @@ export default async function StudioRequests() {
           <p className="studioEyebrow">SALES</p>
           <h1 className="studioH1">Quote Requests</h1>
         </div>
-        <NewStudioRequest userId={user.id} />
+        <Link href="/studio/requests/new" className="btn btnGold">+ New Request</Link>
       </div>
 
       <div className="studioMetrics">
