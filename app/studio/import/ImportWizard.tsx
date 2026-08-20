@@ -33,9 +33,19 @@ function matchScore(query: string, target: string): number {
   return hits.length / Math.max(qw.length, tw.length);
 }
 
+function isSectionHeader(line: string): boolean {
+  // Lines like "Camera", "Lights", "Audio" — short, letters only, no list markers with content
+  const clean = line.replace(/^[*•\-\s]+/, "").trim();
+  return clean.length <= 20 && /^[A-Za-z][\sA-Za-z]*$/.test(clean);
+}
+
 function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
   const SKIP = /^(hi|hello|dear|regards|thanks|please|note[:\s]|from[:\s]|to[:\s]|date[:\s]|subject[:\s]|re[:\s]|\d{10}|https?:)/i;
-  const lines = text.split(/\n/).map((l) => l.trim()).filter((l) => l.length > 2 && !SKIP.test(l));
+  const lines = text
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 2 && !SKIP.test(l) && !isSectionHeader(l));
+
   const results: ParsedItem[] = [];
 
   for (const line of lines) {
@@ -43,28 +53,44 @@ function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
     let qty = 1;
     let days = 1;
 
-    // Extract quantity
-    const qPatterns: [RegExp, number][] = [
-      [/^(\d+)\s*[x×]\s*/i, 1],
-      [/\s*[x×]\s*(\d+)\s*$/i, 1],
-      [/^(\d+)\s+(?:nos?\.?|pcs?\.?|units?)\s+/i, 1],
-      [/\((\d+)\s*(?:nos?\.?|pcs?\.?|units?)?\)\s*$/, 1],
-      [/^qty\s*[:\-]?\s*(\d+)\s*/i, 1],
-    ];
-    for (const [pat, grp] of qPatterns) {
-      const m = raw.match(pat);
-      if (m) { qty = parseInt(m[grp]); raw = raw.replace(m[0], "").trim(); break; }
+    // 1. Strip list markers (* - • 1. etc.)
+    raw = raw.replace(/^[*•\-\d.)\s]+/, "").trim();
+    if (!raw || raw.length < 2) continue;
+
+    // 2. Strip price suffixes: "= 11000", "= 1000 = 1600" (must come before qty detection)
+    raw = raw.replace(/\s*=\s*[\d,]+.*$/, "").trim();
+
+    // 3. Extract trailing qty: "– 2 Nos." / "- 3 nos" / "– 2" at end of string
+    //    Use em-dash OR hyphen only when followed by digits (avoids stripping hyphenated names)
+    const trailingQty = raw.match(/\s*[––]\s*(\d+)\.?\s*(?:nos?\.?|pcs?\.?|units?\.?)?\s*$/i);
+    if (trailingQty) {
+      qty = parseInt(trailingQty[1]);
+      raw = raw.slice(0, trailingQty.index).trim();
     }
 
-    // Extract days
-    const dm = raw.match(/\bfor\s+(\d+)\s+days?\b|\b(\d+)\s*[-–]\s*days?\b/i);
+    // 4. Extract leading/other qty patterns (only if not already found)
+    if (qty === 1) {
+      const qPatterns: [RegExp, number][] = [
+        [/^(\d+)\s*[x×]\s*/i, 1],
+        [/\s*[x×]\s*(\d+)\s*$/i, 1],
+        [/^(\d+)\s+(?:nos?\.?|pcs?\.?|units?)\s+/i, 1],
+        [/\((\d+)\s*(?:nos?\.?|pcs?\.?|units?)?\)\s*$/, 1],
+        [/^qty\s*[:\-]?\s*(\d+)\s*/i, 1],
+      ];
+      for (const [pat, grp] of qPatterns) {
+        const m = raw.match(pat);
+        if (m) { qty = parseInt(m[grp]); raw = raw.replace(m[0], "").trim(); break; }
+      }
+    }
+
+    // 5. Extract rental days
+    const dm = raw.match(/\bfor\s+(\d+)\s+days?\b|\b(\d+)\s+days?\b/i);
     if (dm) { days = parseInt(dm[1] || dm[2]); raw = raw.replace(dm[0], "").trim(); }
 
-    // Remove list markers and trailing detail
-    raw = raw.replace(/^[-•*\d.)\s]+/, "").replace(/\s*[-–|]\s*.+$/, "").trim();
-    if (!raw || raw.length < 3) continue;
+    raw = raw.trim();
+    if (!raw || raw.length < 2) continue;
 
-    // Fuzzy match
+    // 6. Fuzzy match against catalog
     let best: CatalogItem | null = null;
     let bestScore = 0;
     for (const item of catalog) {
