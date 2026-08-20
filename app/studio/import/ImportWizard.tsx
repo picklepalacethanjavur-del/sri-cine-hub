@@ -34,9 +34,12 @@ function matchScore(query: string, target: string): number {
 }
 
 function isSectionHeader(line: string): boolean {
-  // Lines like "Camera", "Lights", "Audio" — short, letters only, no list markers with content
-  const clean = line.replace(/^[*•\-\s]+/, "").trim();
-  return clean.length <= 20 && /^[A-Za-z][\sA-Za-z]*$/.test(clean);
+  // Only skip if there is NO list marker (* - •) — lines with markers are always items
+  if (/^[*•\-\d]/.test(line.trim())) return false;
+  // Single-word letter-only lines without a marker are section labels ("Camera", "Lights")
+  // Multi-word lines without markers ("Batis Lens Kit") are still treated as items
+  const clean = line.trim();
+  return /^[A-Za-z]+$/.test(clean) && clean.length <= 20;
 }
 
 function parseText(text: string, catalog: CatalogItem[]): ParsedItem[] {
