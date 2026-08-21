@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -43,6 +43,8 @@ export function QuickRentForm({
   const [err, setErr] = useState("");
   const [unavailCams, setUnavailCams] = useState<Set<string>>(new Set());
   const [unavailAccs, setUnavailAccs] = useState<Set<string>>(new Set());
+  const startRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLInputElement>(null);
 
   const days = daysBetween(startAt, endAt);
 
@@ -129,7 +131,8 @@ export function QuickRentForm({
       const { data: b, error: be } = await supabase.from("bookings").insert({
         booking_code: code,
         customer_id: c.id,
-        status: "active",
+        status: "checked_out",
+        quoted_total_inr: subtotal,
         production_name: company.trim() || name.trim(),
         contact_name: name.trim(),
         contact_phone: phone.trim() || null,
@@ -238,11 +241,17 @@ export function QuickRentForm({
           <div className="quickRentGrid2">
             <label className="quickRentLabel">
               Checkout *
-              <input type="date" className="quickRentInput" value={startAt} onChange={e => setStartAt(e.target.value)} />
+              <div className="newReqDateWrap" onClick={() => startRef.current?.showPicker()}>
+                <span className="newReqDateIcon">📅</span>
+                <input ref={startRef} type="date" className="newReqDateInput" value={startAt} onChange={e => setStartAt(e.target.value)} />
+              </div>
             </label>
             <label className="quickRentLabel">
               Return *
-              <input type="date" className="quickRentInput" value={endAt} min={startAt} onChange={e => setEndAt(e.target.value)} />
+              <div className="newReqDateWrap" onClick={() => endRef.current?.showPicker()}>
+                <span className="newReqDateIcon">📅</span>
+                <input ref={endRef} type="date" className="newReqDateInput" value={endAt} min={startAt} onChange={e => setEndAt(e.target.value)} />
+              </div>
             </label>
           </div>
           {startAt && endAt && <p className="quickRentDays">{days} day{days !== 1 ? "s" : ""}</p>}
