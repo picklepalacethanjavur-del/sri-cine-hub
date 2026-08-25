@@ -132,7 +132,6 @@ export function QuickRentForm({
         booking_code: code,
         customer_id: c.id,
         status: "checked_out",
-        quoted_total_inr: subtotal,
         production_name: company.trim() || name.trim(),
         contact_name: name.trim(),
         contact_phone: phone.trim() || null,
