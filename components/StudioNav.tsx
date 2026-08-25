@@ -4,26 +4,30 @@ import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/SignOutButton";
 
 const MAIN = [
-  { href: "/studio",          label: "Today",      exact: true },
-  { href: "/admin/quick-rent",label: "Quick Rent"             },
-  { href: "/studio/requests", label: "Requests"               },
-  { href: "/studio/bookings", label: "Bookings"               },
-  { href: "/studio/ops",      label: "Checkout/Return"        },
-  { href: "/studio/receipts", label: "Receipts"               },
+  { href: "/studio",          label: "Today",           exact: true },
+  { href: "/admin/quick-rent",label: "Quick Rent"                   },
+  { href: "/studio/requests", label: "Requests"                     },
+  { href: "/studio/bookings", label: "Bookings"                     },
+  { href: "/studio/ops",      label: "Checkout/Return"              },
+  { href: "/studio/receipts", label: "Receipts"                     },
 ];
 
+// Visible to all staff (manager level)
+const MANAGER = [
+  { href: "/admin/sourcing",   label: "Hire-In"   },
+  { href: "/admin/calendar",   label: "Calendar"  },
+  { href: "/studio/inventory", label: "Inventory" },
+  { href: "/studio/suppliers", label: "Suppliers" },
+  { href: "/admin/setup",      label: "Setup"     },
+];
+
+// Admin-only
 const ADMIN_ONLY = [
-  { href: "/admin/deals",      label: "Deals"      },
-  { href: "/admin/quotations", label: "Quotations" },
-  { href: "/admin/sourcing",   label: "Sourcing"   },
-  { href: "/admin/calendar",   label: "Calendar"   },
+  { href: "/admin/deals", label: "Deals" },
 ];
 
 const TOOLS = [
-  { href: "/studio/inventory", label: "Inventory"       },
-  { href: "/studio/suppliers", label: "Suppliers"       },
-  { href: "/admin/setup",      label: "Setup"           },
-  { href: "/invest",           label: "Investor portal" },
+  { href: "/invest", label: "Investor portal" },
 ];
 
 export function StudioNav({ name, role }: { name: string; role?: string }) {
@@ -44,6 +48,13 @@ export function StudioNav({ name, role }: { name: string; role?: string }) {
         <nav className="studioSidebarNav">
           {MAIN.map(({ href, label, exact }) => (
             <Link key={href} href={href} className={`studioNavItem${active(href, exact) ? " active" : ""}`}>{label}</Link>
+          ))}
+        </nav>
+        <div className="studioSidebarDivider" />
+        <p className="studioSidebarSection">Manage</p>
+        <nav className="studioSidebarNav">
+          {MANAGER.map(({ href, label }) => (
+            <Link key={href} href={href} className={`studioNavItem${active(href) ? " active" : ""}`}>{label}</Link>
           ))}
         </nav>
         {isAdmin && (
