@@ -131,7 +131,7 @@ export function QuickRentForm({
       const { data: b, error: be } = await supabase.from("bookings").insert({
         booking_code: code,
         customer_id: c.id,
-        status: "checked_out",
+        status: "confirmed",
         production_name: company.trim() || name.trim(),
         contact_name: name.trim(),
         contact_phone: phone.trim() || null,
