@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default async function InvestLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireInvestor();
-  const isStaff = ["admin","manager"].includes(profile.role);
+  const isStaff = ["admin","manager","staff"].includes(profile.role);
   return (
     <div className="investShell">
       <header className="investHeader">

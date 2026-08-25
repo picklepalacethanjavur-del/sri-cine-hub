@@ -10,7 +10,7 @@ export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return new NextResponse("Unauthorized",{status:401});
   const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",user.id).single();
-  if(!profile?.is_active||!["admin","manager"].includes(profile.role))return new NextResponse("Forbidden",{status:403});
+  if(!profile?.is_active||!["admin","manager","staff"].includes(profile.role))return new NextResponse("Forbidden",{status:403});
   const data=await loadPremiumReceiptData(supabase,id);
   if(!data)return new NextResponse("Not found",{status:404});
   const bytes=await makePremiumReceiptPdf(data);

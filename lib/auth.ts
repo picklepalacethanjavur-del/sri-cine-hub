@@ -7,7 +7,7 @@ export async function requireStaff(){
   if(!user) redirect("/login");
   const {data:profile}=await supabase.from("profiles")
     .select("full_name,role,is_active").eq("id",user.id).single();
-  if(!profile?.is_active || !["admin","manager"].includes(profile.role)) redirect("/investors");
+  if(!profile?.is_active || !["admin","manager","staff"].includes(profile.role)) redirect("/investors");
   return {supabase,user,profile};
 }
 
