@@ -8,7 +8,7 @@ const MAIN = [
   { href: "/admin/quick-rent",label: "Quick Rent"             },
   { href: "/studio/requests", label: "Requests"               },
   { href: "/studio/bookings", label: "Bookings"               },
-  { href: "/studio/ops",      label: "Ops"                    },
+  { href: "/studio/ops",      label: "Checkout/Return"        },
   { href: "/studio/receipts", label: "Receipts"               },
 ];
 
